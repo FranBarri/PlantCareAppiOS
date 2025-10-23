@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-@main
+//@main
 struct PlantParentiOSApp: App {
     var body: some Scene {
         WindowGroup {
