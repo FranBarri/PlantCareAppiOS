@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-//@main
-struct PlantParentiOS: App {
+@main
+struct PlantParentiOSApp: App {
     var body: some Scene {
         WindowGroup {
             MainTabView()

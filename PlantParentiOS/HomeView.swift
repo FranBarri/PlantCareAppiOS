@@ -68,14 +68,14 @@ struct HomeView: View {
                         .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                         .frame(height: 260)
                     }
-                }
-                task {
-                    await store.fetchPlants()
-                }
-                .alert("API Error", isPresented: .constant(store.errorMessage != nil)) {
-                    Button("OK") { store.errorMessage = nil }
-                } message: {
-                    Text(store.errorMessage ?? "")
+                    task {
+                        await store.fetchPlants()
+                    }
+                    .alert("API Error", isPresented: .constant(store.errorMessage != nil)) {
+                        Button("OK") { store.errorMessage = nil }
+                    } message: {
+                        Text(store.errorMessage ?? "")
+                    }
                 }
             }
         }

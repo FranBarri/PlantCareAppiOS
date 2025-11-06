@@ -40,7 +40,7 @@ class PlantStore: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         
-        guard let url = URL(string: "https://www.perenual.com/api/v2/species-list?key=\(apiKey)") else {
+        guard let url = URL(string: "https://www.perenual.com/api/v2/species-list?page=\(page)&key=\(apiKey)&indoor1") else {
             errorMessage = "Invalid URL"
             return
         }
