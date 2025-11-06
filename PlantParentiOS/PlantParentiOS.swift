@@ -8,10 +8,10 @@
 import SwiftUI
 
 //@main
-struct PlantParentiOSApp: App {
+struct PlantParentiOS: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainTabView()
         }
     }
 }

@@ -7,15 +7,6 @@
 
 import SwiftUI
 
-@main
-struct PlantParentApp: App {
-    var body: some Scene {
-        WindowGroup {
-            MainTabView()
-        }
-    }
-}
-
 struct MainTabView: View {
     var body: some View {
         TabView {
@@ -43,7 +34,7 @@ struct MainTabView: View {
                 .tabItem {
                     Label("Notifications", systemImage: "bell")
                 }*/
-                .accentColor(.green)
         }
+        .accentColor(.green)
     }
 }

@@ -1,6 +1,6 @@
 //
 //  HomeView.swift
-//  PlantParentiOS
+//  PlantParentiOSApp
 //
 //  Created by stud on 23/10/2025.
 //
@@ -15,10 +15,7 @@ struct CarouselPlant: Identifiable {
 }
 
 struct HomeView: View {
-    private let carouselPlants: [CarouselPlant] = [
-        .init(imageName: "Monstera", name: "Monstera Deliciosa", light: "Thrives in bright, indirect  light"),
-        .init(imageName: "SnakePlant", name: "Snake Plant", light: "Bright, filtered light")
-    ]
+    @StateObject private var store = PlantStore()
     
     var body: some View {
         NavigationStack {
@@ -58,16 +55,27 @@ struct HomeView: View {
                         }
                     }
                     
-                    // Plant Carousel
-                    TabView(selection: .constant(0)) {
-                        ForEach(carouselPlants) { plant in
-                            PlantCarouselCard(plant: plant)
-                                .tag(plant.id)
+                    // Plant carousel
+                    if store.isLoading && store.plants.isEmpty {
+                        ProgressView("Loading plants...")
+                            .frame(height:260)
+                    } else {
+                        TabView {
+                            ForEach(store.plants.prefix(10)) { plant in
+                                PlantCarouselCard(plant: plant)
+                            }
                         }
+                        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                        .frame(height: 260)
                     }
-                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                    .frame(height: 220)
-                    .padding(.horizontal, 4)
+                }
+                task {
+                    await store.fetchPlants()
+                }
+                .alert("API Error", isPresented: .constant(store.errorMessage != nil)) {
+                    Button("OK") { store.errorMessage = nil }
+                } message: {
+                    Text(store.errorMessage ?? "")
                 }
             }
         }
@@ -75,59 +83,54 @@ struct HomeView: View {
 }
 
 struct PlantCarouselCard: View {
-    let plant: CarouselPlant
+    let plant: PerenualPlant
     
     var body: some View {
         VStack(spacing: 12) {
-            Image(plant.imageName)
-                .resizable()
-                .scaledToFit()
-                .frame(height: 90)
-                .clipped()
-                .cornerRadius(8)
+            AsyncImage(url: URL(string: plant.default_image?.regular_url ?? "")) { image in
+                image.resizable().scaledToFit()
+            } placeholder: {
+                Image(systemName: "leaf.fill")
+                    .font(.system(size: 60))
+                    .foregroundColor(.green.opacity(0.3))
+            }
+            .frame(height: 100)
+            .cornerRadius(10)
             
-            Text(plant.name)
-                .font(.caption)
-                .fontWeight(.medium)
+            Text(plant.common_name)
+                .font(.headline)
                 .multilineTextAlignment(.center)
             
-            Text(plant.light)
-                .font(.caption2)
+            Text(plant.sunlight.first ?? "Any light")
+                .font(.caption)
                 .foregroundColor(.secondary)
-                .lineLimit(2)
             
             HStack(spacing: 12) {
                 Button {
-                    //add functionality
+                    print("Added \(plant.common_name) to My Garden")
                 } label: {
                     Label("Add to My Garden", systemImage: "plus")
-                        .font(.caption)
-                        .frame(maxWidth: .infinity)
+                        .font(.caption).frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
-                .tint(.green)
+                .buttonStyle(.bordered).tint(.green)
                 
                 Button {
-                    //add functionality
+                    print("Browsing \(plant.common_name)")
                 } label: {
                     Label("Browse Library", systemImage: "book")
-                        .font(.caption)
-                        .frame(maxWidth: .infinity)
+                        .font(.caption).frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
-                .tint(.blue)
+                .buttonStyle(.bordered).tint(.blue)
             }
-            .frame(height: 36)
         }
         .padding()
-        .frame(maxWidth: .infinity)
         .background(Color(.systemBackground))
         .cornerRadius(16)
         .shadow(radius: 3)
         .padding(.horizontal, 8)
     }
 }
-        
+
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
         HomeView()
