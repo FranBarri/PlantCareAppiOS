@@ -21,6 +21,15 @@ struct PerenualPlant: Codable, Identifiable {
     let indoor: Bool?
     let poisonous_to_pets: Int?
     let default_image: DefaultImage?
+    
+    var displayName: String {
+        common_name.capitalized
+    }
+    
+    var sunLightText: String {
+        guard let sunlight = sunlight, !sunlight.isEmpty else { return "Any light" }
+        return sunlight.map {$0.capitalized }.joined(separator: ", ")
+    }
 
     struct DefaultImage: Codable {
         let regular_url: String?
