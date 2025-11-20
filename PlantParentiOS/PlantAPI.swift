@@ -58,5 +58,5 @@ class PlantStore: ObservableObject {
                 PerenualPlant(id: 426, common_name: "Snake Plant", scientific_name: ["Sansevieria"], watering: "Minimum", sunlight: ["low light"], indoor: true, poisonous_to_pets: 0, default_image: DefaultImage(regular_url: "https://perenual.com/storage/species_image/426_sansevieria_trifasciata/og/snakeplant.jpg"))
             ]
         }
-    }
+    }   x
 }
