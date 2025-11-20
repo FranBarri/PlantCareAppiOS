@@ -12,14 +12,14 @@ struct MainTabView: View {
         TabView {
             HomeView()
                 .tabItem { Label("Home", systemImage: "house") }
-            MyGreenhouseView()
-                .tabItem { Label("Greenhouse", systemImage: "leaf") }
-            PlantLibraryView()
-                .tabItem { Label("Library", systemImage: "book") }
-            PlantDetailPlaceholder()
-                .tabItem { Label("Detail", systemImage: "info.circle") }
-            NotificationsView()
-                .tabItem { Label("bell", systemImage: "bell") }
+//            MyGreenhouseView()
+//                .tabItem { Label("Greenhouse", systemImage: "leaf") }
+//            PlantLibraryView()
+//                .tabItem { Label("Library", systemImage: "book") }
+//            PlantDetailPlaceholder()
+//                .tabItem { Label("Detail", systemImage: "info.circle") }
+//            NotificationsView()
+//                .tabItem { Label("bell", systemImage: "bell") }
         }
         .accentColor(.green)
     }

@@ -25,7 +25,7 @@ struct PlantCarouselCard: View {
                 Button("Add to My Garden") { }
                     .buttonStyle(.bordered)
                     .tint(.green)
-                Button("Browse Library...") { }
+                Button("Browse Library") { }
                     .buttonStyle(.bordered)
             }
         }

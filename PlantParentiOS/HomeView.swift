@@ -63,6 +63,7 @@ struct HomeView: View {
                         TipRow(icon: "sun.max.fill", title: "Sunlight", text: "Rotate your plants weekly for even growth towards the light.")
                     }
                     .padding(.horizontal)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .navigationTitle("Hello Plant Parent!")
