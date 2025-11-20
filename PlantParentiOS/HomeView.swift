@@ -7,21 +7,11 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    // Header
-                    HStack {
-                        Text("Hello Plant Parent!")
-                            .font(.title2).bold()
-                        Spacer()
-                        Image(systemName: "bell.badge")
-                            .foregroundColor(.green)
-                            .font(.title2)
-                    }
-                    .padding(.horizontal)
-
                     // Search
                     HStack {
                         Image(systemName: "magnifyingglass")
                         TextField("Search", text: .constant(""))
+                            .textFieldStyle(.plain)
                     }
                     .padding()
                     .background(Color(.systemGray6))
@@ -29,55 +19,79 @@ struct HomeView: View {
                     .padding(.horizontal)
 
                     // Watering Reminder
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Image(systemName: "drop.fill").foregroundColor(.white)
-                            Text("Next Watering Reminder").font(.headline).foregroundColor(.white)
-                            Spacer()
-                            Image(systemName: "chevron.right").foregroundColor(.white)
+                    HStack {
+                        Image(systemName: "drop.fill")
+                            .foregroundColor(.green)
+                            .font(.title)
+                        VStack(alignment: .leading) {
+                            Text("Next Watering Reminder")
+                                .font(.subheadline).bold()
+                            Text("Fiddle Leaf Fig")
+                                .font(.headline)
+                            Text("Tomorrow, 9:00 AM")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
-                        Text("Fiddle Leaf Fig").foregroundColor(.white.opacity(0.9))
-                        Text("Tomorrow, 9:00 AM").foregroundColor(.white.opacity(0.9))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.green)
                     }
                     .padding()
-                    .background(Color.green.opacity(0.9))
+                    .background(Color.green.opacity(0.15))
                     .cornerRadius(12)
                     .padding(.horizontal)
 
-                    // Carousel
+                    // Carousel (exactly like screenshot)
                     if store.isLoading {
-                        ProgressView().frame(height: 260)
+                        ProgressView().frame(height: 300)
                     } else {
                         TabView {
                             ForEach(store.plants.prefix(8)) { plant in
                                 PlantCarouselCard(plant: plant)
                             }
                         }
-                        .tabViewStyle(PageTabViewStyle())
-                        .frame(height: 260)
+                        .tabViewStyle(.page)
+                        .frame(height: 300)
                     }
 
                     // Quick Tips
-                    Text("Quick Tips")
-                        .font(.title3).bold()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Quick Tips")
+                            .font(.title3).bold()
 
-                    TipCard(icon: "drop.fill", title: "Watering", tip: "Water when the top inch of soil is dry.")
-                    TipCard(icon: "sun.max.fill", title: "Sunlight", tip: "Rotate your plants weekly.")
+                        TipRow(icon: "drop.fill", title: "Watering", text: "Water when the top inch of soil is dry.\nAvoid Overwatering.")
+                        TipRow(icon: "sun.max.fill", title: "Sunlight", text: "Rotate your plants weekly for even growth towards the light.")
+                    }
+                    .padding(.horizontal)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(.vertical)
             }
             .navigationTitle("Hello Plant Parent!")
-            .task { 
-                await store.fetchPlants() 
-            }
+            .navigationBarTitleDisplayMode(.inline)
+            .task { await store.fetchPlants() }
         }
     }
 }
 
-// Keep your PlantCarouselCard, TipCard, etc. exactly as you have them
-// Just add this at the bottom:
-#Preview {
-    MainTabView()   // This makes Canvas show the full app with tabs
+struct TipRow: View {
+    let icon: String
+    let title: String
+    let text: String
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: icon)
+                .foregroundColor(.green)
+                .frame(width: 30)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.headline)
+                Text(text)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
 }

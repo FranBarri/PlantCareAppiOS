@@ -11,29 +11,15 @@ struct MainTabView: View {
     var body: some View {
         TabView {
             HomeView()
-                .tabItem {
-                    Label("Home", systemImage: "house")
-                }
-            
-            /* MyGreenhouseView()
-                .tabItem {
-                    Label("My Greenhouse", systemImage: "leaf")
-                }
-            
-            PlantLibraryView()
-                .tabItem {
-                    Label("Plant Library", systemImage: "book")
-                }
-            
-            PlantDetailView()
-                .tabItem {
-                    Label("Plant Detail", systemImage: "info.circle")
-                }
-            
-            NotificationsView()
-                .tabItem {
-                    Label("Notifications", systemImage: "bell")
-                }*/
+                .tabItem { Label("Home", systemImage: "house") }
+//            MyGreenhouseView()
+//                .tabItem { Label("Greenhouse", systemImage: "leaf") }
+//            PlantLibraryView()
+//                .tabItem { Label("Library", systemImage: "book") }
+//            PlantDetailPlaceholder()
+//                .tabItem { Label("Detail", systemImage: "info.circle") }
+//            NotificationsView()
+//                .tabItem { Label("bell", systemImage: "bell") }
         }
         .accentColor(.green)
     }
