@@ -13,11 +13,11 @@ struct PlantCarouselCard: View {
             .frame(height: 140)
             .clipped()
 
-            Text(plant.common_name)
+            Text(plant.displayName)
                 .font(.headline)
                 .multilineTextAlignment(.center)
 
-            Text(plant.sunlight?.first?.capitalized ?? "Any light")
+            Text(plant.sunLightText)
                 .font(.caption)
                 .foregroundColor(.secondary)
 
