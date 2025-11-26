@@ -1,13 +1,20 @@
 import SwiftUI
 
 struct PlantLibraryView: View {
+    @StateObject private var store = PlantStore()
     @State private var searchText: String = ""
     @State private var selectedFilter = ""
+    
+    let columns = [
+        GridItem(.flexible()),
+        GridItem(.flexible())
+    ]
     
     let filters = ["Low-Light", "Pet-Friendly", "Beginner", "Hardy"]
     
     var body: some View {
         NavigationStack {
+            
             VStack(spacing: 0) {
                 VStack(spacing: 8) {
                     // Search
@@ -51,8 +58,43 @@ struct PlantLibraryView: View {
                 }
                 .background(Color.white)
             }
-            .navigationTitle("Plant Library")
+            Divider()
+
+            // Content
+            ScrollView {
+                if store.isLoading {
+                    ProgressView()
+                        .padding(.top, 40)
+                } else {
+                    LazyVGrid(columns: columns, spacing: 20) {
+                        ForEach(store.plants) { plant in
+                            VStack {
+                                // Image
+                                AsyncImage(url: URL(string: plant.default_image?.regular_url ?? "")) { img in
+                                    img.resizable()
+                                        .scaledToFill()
+                                } placeholder: {
+                                    Color(.systemGray5)
+                                }
+                                .frame(width: 130, height: 130)
+                                .clipShape(Circle())
+                                .shadow(radius: 4)
+                                
+                                // Name
+                                Text(plant.displayName)
+                                    .font(.headline)
+                                    .foregroundColor(.black)
+                                    .lineLimit(1)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .padding()
+                }
+            }
+            
         }
+        .navigationTitle("Plant Library")
     }
 }
 
