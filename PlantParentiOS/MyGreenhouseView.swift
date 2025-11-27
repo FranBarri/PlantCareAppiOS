@@ -10,6 +10,16 @@ struct Plant: Identifiable, Equatable, Hashable {
     let lastWatered: String
     let status: String
     let statusColor: Color
+
+    init(id: UUID = UUID(), name: String, imageName: String, imageURL: String? = nil, lastWatered: String, status: String, statusColor: Color) {
+        self.id = id
+        self.name = name
+        self.imageName = imageName
+        self.imageURL = imageURL
+        self.lastWatered = lastWatered
+        self.status = status
+        self.statusColor = statusColor
+    }
 }
 
 struct MyGreenhouseView: View {
