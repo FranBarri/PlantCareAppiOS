@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @StateObject private var greenhouse = GreenhouseStore()
+    
     var body: some View {
         TabView {
             NavigationStack {
@@ -27,6 +29,7 @@ struct MainTabView: View {
             NotificationsView()
                 .tabItem { Label("Notifications", systemImage: "bell") }
         }
+        .environmentObject(greenhouse)
         .accentColor(.green)
     }
 }

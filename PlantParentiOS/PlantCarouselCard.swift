@@ -22,7 +22,7 @@ struct PlantCarouselCard: View {
                 .foregroundColor(.secondary)
 
             HStack(spacing: 12) {
-                Button("Add to My Garden") { }
+                Button("Add to my Greenhouse") { }
                     .buttonStyle(.bordered)
                     .tint(.green)
                 Button("Browse Library") { }

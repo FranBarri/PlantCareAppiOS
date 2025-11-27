@@ -2,8 +2,13 @@ import SwiftUI
 
 struct HomeView: View {
     @StateObject private var store = PlantStore()
+    @EnvironmentObject private var greenhouse: GreenhouseStore
     @State private var showBanner: Bool = true
     @State private var bannerMessage: String = "Hello Plant Parent!"
+    
+    @State private var showToast: Bool = false
+    @State private var toastMessage: String = ""
+    @State private var toastIsError: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -75,10 +80,30 @@ struct HomeView: View {
                         .padding(.top, 8)
                 }
             }
+            .overlay(alignment: .bottom) {
+                if showToast {
+                    HStack(spacing: 8) {
+                        Image(systemName: toastIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                            .foregroundColor(.white)
+                        Text(toastMessage)
+                            .foregroundColor(.white)
+                            .font(.subheadline).bold()
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule()
+                            .fill(toastIsError ? Color.red : Color.green)
+                            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+                    )
+                    .padding(.bottom, 24)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .task {
-                await store.fetchPlants()
+                // Removed: await store.fetchPlants()
                 // Auto-dismiss banner after 3 seconds
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
                 await MainActor.run {
@@ -87,6 +112,32 @@ struct HomeView: View {
                     }
                 }
             }
+        }
+    }
+    
+    private func addToGreenhouse(from source: PerenualPlant) {
+        let name = source.common_name.isEmpty ? (source.scientific_name.first ?? "Unknown") : source.common_name
+        let exists = greenhouse.plants.contains { $0.name == name }
+        if exists {
+            toastMessage = "\(name) is already in your greenhouse"
+            toastIsError = true
+            withAnimation(.spring()) { showToast = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                withAnimation(.easeInOut) { showToast = false }
+            }
+            return
+        }
+        let imageName = "monstera"
+        let lastWatered = "Today"
+        let status = "All good"
+        let statusColor: Color = .green
+        let plant = Plant(id: UUID(), name: name, imageName: imageName, lastWatered: lastWatered, status: status, statusColor: statusColor)
+        greenhouse.add(plant)
+        toastMessage = "Added \(name) to your greenhouse"
+        toastIsError = false
+        withAnimation(.spring()) { showToast = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+            withAnimation(.easeInOut) { showToast = false }
         }
     }
 }
@@ -155,4 +206,5 @@ struct BannerView: View {
     ]
     return HomeView()
         .environmentObject(store)
+        .environmentObject(GreenhouseStore())
 }
