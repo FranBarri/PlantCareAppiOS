@@ -2,6 +2,8 @@ import SwiftUI
 
 struct PlantCarouselCard: View {
     let plant: PerenualPlant
+    // Optional callback when user taps Add
+    var onAdd: ((PerenualPlant) -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 12) {
@@ -22,9 +24,12 @@ struct PlantCarouselCard: View {
                 .foregroundColor(.secondary)
 
             HStack(spacing: 12) {
-                Button("Add to my Greenhouse") { }
-                    .buttonStyle(.bordered)
-                    .tint(.green)
+                Button("Add to my Greenhouse") {
+                    onAdd?(plant)
+                }
+                .buttonStyle(.bordered)
+                .tint(.green)
+
                 Button("Browse Library") { }
                     .buttonStyle(.bordered)
             }

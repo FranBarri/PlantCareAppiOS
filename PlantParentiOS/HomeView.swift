@@ -54,7 +54,9 @@ struct HomeView: View {
                     } else {
                         TabView {
                             ForEach(store.plants.prefix(8)) { plant in
-                                PlantCarouselCard(plant: plant)
+                                PlantCarouselCard(plant: plant, onAdd: { _ in
+                                    addToGreenhouse(from: plant)
+                                })
                             }
                         }
                         .tabViewStyle(.page)
@@ -127,11 +129,13 @@ struct HomeView: View {
             }
             return
         }
+        // Prefer the remote image URL from the API, fall back to a local asset name
+        let imageURL = source.default_image?.regular_url
         let imageName = "monstera"
         let lastWatered = "Today"
         let status = "All good"
         let statusColor: Color = .green
-        let plant = Plant(id: UUID(), name: name, imageName: imageName, lastWatered: lastWatered, status: status, statusColor: statusColor)
+        let plant = Plant(id: UUID(), name: name, imageName: imageName, imageURL: imageURL, lastWatered: lastWatered, status: status, statusColor: statusColor)
         greenhouse.add(plant)
         toastMessage = "Added \(name) to your greenhouse"
         toastIsError = false

@@ -3,7 +3,10 @@ import SwiftUI
 struct Plant: Identifiable, Equatable, Hashable {
     let id: UUID
     let name: String
+    // Local asset name fallback
     let imageName: String
+    // Remote image URL (preferred if available)
+    let imageURL: String?
     let lastWatered: String
     let status: String
     let statusColor: Color
@@ -85,12 +88,23 @@ struct PlantCardView: View {
     
     var body: some View {
         HStack {
-            Image(plant.imageName)
-                .resizable()
-                .scaledToFit()
+            if let urlString = plant.imageURL, let url = URL(string: urlString) {
+                AsyncImage(url: url) { image in
+                    image.resizable().scaledToFit()
+                } placeholder: {
+                    Color.gray.opacity(0.2)
+                }
                 .frame(width: 80, height: 80)
                 .clipShape(RoundedRectangle(cornerRadius: 15))
                 .shadow(radius: 5)
+            } else {
+                Image(plant.imageName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 80, height: 80)
+                    .clipShape(RoundedRectangle(cornerRadius: 15))
+                    .shadow(radius: 5)
+            }
             
             VStack(alignment: .leading, spacing: 5) {
                 Text(plant.name)
@@ -120,11 +134,21 @@ struct SessionAddRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(plant.imageName)
-                .resizable()
-                .scaledToFill()
+            if let urlString = plant.imageURL, let url = URL(string: urlString) {
+                AsyncImage(url: url) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Color.gray.opacity(0.2)
+                }
                 .frame(width: 44, height: 44)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else {
+                Image(plant.imageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
             VStack(alignment: .leading, spacing: 2) {
                 Text(plant.name)
                     .font(.subheadline)
