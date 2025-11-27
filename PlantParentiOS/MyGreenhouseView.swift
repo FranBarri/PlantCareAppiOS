@@ -99,10 +99,23 @@ struct PlantCardView: View {
     var body: some View {
         HStack {
             if let urlString = plant.imageURL, let url = URL(string: urlString) {
-                AsyncImage(url: url) { image in
-                    image.resizable().scaledToFit()
-                } placeholder: {
-                    Color.gray.opacity(0.2)
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        Color.gray.opacity(0.2)
+                    case .success(let image):
+                        image.resizable().scaledToFit()
+                    case .failure(let error):
+                        // Log error for debugging and fall back to local asset
+                        print("AsyncImage load error for \(plant.name): \(error)")
+                        Image(plant.imageName)
+                            .resizable()
+                            .scaledToFit()
+                    @unknown default:
+                        Image(plant.imageName)
+                            .resizable()
+                            .scaledToFit()
+                    }
                 }
                 .frame(width: 80, height: 80)
                 .clipShape(RoundedRectangle(cornerRadius: 15))
@@ -145,10 +158,22 @@ struct SessionAddRow: View {
     var body: some View {
         HStack(spacing: 12) {
             if let urlString = plant.imageURL, let url = URL(string: urlString) {
-                AsyncImage(url: url) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Color.gray.opacity(0.2)
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        Color.gray.opacity(0.2)
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    case .failure(let error):
+                        print("AsyncImage load error for \(plant.name): \(error)")
+                        Image(plant.imageName)
+                            .resizable()
+                            .scaledToFill()
+                    @unknown default:
+                        Image(plant.imageName)
+                            .resizable()
+                            .scaledToFill()
+                    }
                 }
                 .frame(width: 44, height: 44)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
