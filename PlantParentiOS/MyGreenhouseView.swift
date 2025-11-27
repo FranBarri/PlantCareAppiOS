@@ -106,11 +106,8 @@ struct PlantCardView: View {
                     case .success(let image):
                         image.resizable().scaledToFit()
                     case .failure(let error):
-                        // Log error for debugging and fall back to local asset
-                        print("AsyncImage load error for \(plant.name): \(error)")
-                        Image(plant.imageName)
-                            .resizable()
-                            .scaledToFit()
+                            // Fall back to local asset; logging happens in the fallback view's onAppear
+                            FallbackImageView(imageName: plant.imageName, plantName: plant.name, errorDescription: String(describing: error), contentMode: .fit)
                     @unknown default:
                         Image(plant.imageName)
                             .resizable()
@@ -151,6 +148,23 @@ struct PlantCardView: View {
     }
 }
 
+// Helper fallback view that shows a local image and logs the async image error on appear.
+struct FallbackImageView: View {
+    let imageName: String
+    let plantName: String
+    let errorDescription: String
+    let contentMode: ContentMode
+
+    var body: some View {
+        Image(imageName)
+            .resizable()
+            .aspectRatio(contentMode: contentMode)
+            .onAppear {
+                print("AsyncImage load error for \(plantName): \(errorDescription)")
+            }
+    }
+}
+
 struct SessionAddRow: View {
     let plant: Plant
     var onAdd: () -> Void
@@ -165,10 +179,7 @@ struct SessionAddRow: View {
                     case .success(let image):
                         image.resizable().scaledToFill()
                     case .failure(let error):
-                        print("AsyncImage load error for \(plant.name): \(error)")
-                        Image(plant.imageName)
-                            .resizable()
-                            .scaledToFill()
+                            FallbackImageView(imageName: plant.imageName, plantName: plant.name, errorDescription: String(describing: error), contentMode: .fill)
                     @unknown default:
                         Image(plant.imageName)
                             .resizable()
