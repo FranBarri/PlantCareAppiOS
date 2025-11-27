@@ -118,8 +118,14 @@ struct HomeView: View {
     }
     
     private func addToGreenhouse(from source: PerenualPlant) {
-        let name = source.common_name.isEmpty ? (source.scientific_name.first ?? "Unknown") : source.common_name
-        let exists = greenhouse.plants.contains { $0.name == name }
+        // Build a user-friendly display name: trim whitespace, fall back to scientific name, and capitalize words
+        let commonRaw = source.common_name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let scientificRaw = source.scientific_name.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let baseName = commonRaw.isEmpty ? (scientificRaw.isEmpty ? "Unknown" : scientificRaw) : commonRaw
+        let name = baseName.localizedCapitalized
+
+        // Duplicate check should be case-insensitive
+        let exists = greenhouse.plants.contains { $0.name.lowercased() == name.lowercased() }
         if exists {
             toastMessage = "\(name) is already in your greenhouse"
             toastIsError = true
