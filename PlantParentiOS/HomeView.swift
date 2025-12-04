@@ -52,8 +52,15 @@ struct HomeView: View {
                     if store.isLoading {
                         ProgressView().frame(height: 300)
                     } else {
+                        // Show a deduplicated carousel (no duplicate display names)
+                        let uniquePlants = store.plants.uniqued(by: { (p: PerenualPlant) -> String in
+                            let name = p.common_name.trimmingCharacters(in: .whitespacesAndNewlines)
+                            let fallback = p.scientific_name.first ?? ""
+                            return (name.isEmpty ? fallback : name).lowercased()
+                        })
+
                         TabView {
-                            ForEach(store.plants.prefix(8)) { plant in
+                            ForEach(uniquePlants.prefix(8)) { plant in
                                 PlantCarouselCard(plant: plant, onAdd: { _ in
                                     addToGreenhouse(from: plant)
                                 })
@@ -151,6 +158,22 @@ struct HomeView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
             withAnimation(.easeInOut) { showToast = false }
         }
+    }
+}
+
+// Small helper to deduplicate arrays by a selector key
+extension Array {
+    func uniqued<T: Hashable>(by keySelector: (Element) -> T) -> [Element] {
+        var seen = Set<T>()
+        var result: [Element] = []
+        for item in self {
+            let key = keySelector(item)
+            if !seen.contains(key) {
+                seen.insert(key)
+                result.append(item)
+            }
+        }
+        return result
     }
 }
 
