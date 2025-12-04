@@ -56,31 +56,7 @@ struct HomeView: View {
                     if store.isLoading {
                         ProgressView().frame(height: 300)
                     } else {
-                        // Ensure unique list and initial displayed window
-                        let uniquePlants = store.plants.uniqued(by: { (p: PerenualPlant) -> String in
-                            let name = p.common_name.trimmingCharacters(in: .whitespacesAndNewlines)
-                            let fallback = p.scientific_name.first ?? ""
-                            return (name.isEmpty ? fallback : name).lowercased()
-                        })
-
-                        // Update state when source changes
-                        if uniquePlants.map({ $0.id }) != allUniquePlants.map({ $0.id }) {
-                            allUniquePlants = uniquePlants
-                            // Preserve existing displayed window if possible, otherwise take first 8
-                            if displayedPlants.isEmpty {
-                                displayedPlants = Array(allUniquePlants.prefix(8))
-                                pageSelection = 0
-                            } else {
-                                // remove any displayed plants that no longer exist
-                                displayedPlants.removeAll { dp in !allUniquePlants.contains(where: { $0.id == dp.id }) }
-                                // fill up to 8
-                                for p in allUniquePlants where displayedPlants.count < 8 && !displayedPlants.contains(where: { $0.id == p.id }) {
-                                    displayedPlants.append(p)
-                                }
-                                pageSelection = min(pageSelection, max(0, displayedPlants.count - 1))
-                            }
-                        }
-
+                        // Render the current displayed window (managed by refreshUniquePlants)
                         TabView(selection: $pageSelection) {
                             ForEach(Array(displayedPlants.enumerated()), id: \.1.id) { index, plant in
                                 PlantCarouselCard(plant: plant, onAdd: { _ in
@@ -91,6 +67,12 @@ struct HomeView: View {
                         }
                         .tabViewStyle(.page)
                         .frame(height: 300)
+                        .onAppear {
+                            refreshUniquePlants()
+                        }
+                        .onChange(of: store.plants) { _ in
+                            refreshUniquePlants()
+                        }
                     }
 
                     // When the user reaches the last page, attempt to load/rotate in a new plant
@@ -202,6 +184,32 @@ struct HomeView: View {
         withAnimation(.spring()) { showToast = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
             withAnimation(.easeInOut) { showToast = false }
+        }
+    }
+
+    private func refreshUniquePlants() {
+        let uniquePlants = store.plants.uniqued(by: { (p: PerenualPlant) -> String in
+            let name = p.common_name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let fallback = p.scientific_name.first ?? ""
+            return (name.isEmpty ? fallback : name).lowercased()
+        })
+
+        // Update state only when changed
+        if uniquePlants.map({ $0.id }) != allUniquePlants.map({ $0.id }) {
+            allUniquePlants = uniquePlants
+            // Preserve existing displayed window if possible, otherwise take first 8
+            if displayedPlants.isEmpty {
+                displayedPlants = Array(allUniquePlants.prefix(8))
+                pageSelection = 0
+            } else {
+                // remove any displayed plants that no longer exist
+                displayedPlants.removeAll { dp in !allUniquePlants.contains(where: { $0.id == dp.id }) }
+                // fill up to 8
+                for p in allUniquePlants where displayedPlants.count < 8 && !displayedPlants.contains(where: { $0.id == p.id }) {
+                    displayedPlants.append(p)
+                }
+                pageSelection = min(pageSelection, max(0, displayedPlants.count - 1))
+            }
         }
     }
 }
