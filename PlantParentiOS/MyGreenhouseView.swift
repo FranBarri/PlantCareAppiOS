@@ -4,14 +4,14 @@ struct Plant: Identifiable, Equatable, Hashable {
     let id: UUID
     let name: String
     // Local asset name fallback
-    let imageName: String
+    let imageName: String?
     // Remote image URL (preferred if available)
     let imageURL: String?
     let lastWatered: String
     let status: String
     let statusColor: Color
 
-    init(id: UUID = UUID(), name: String, imageName: String, imageURL: String? = nil, lastWatered: String, status: String, statusColor: Color) {
+    init(id: UUID = UUID(), name: String, imageName: String? = nil, imageURL: String? = nil, lastWatered: String, status: String, statusColor: Color) {
         self.id = id
         self.name = name
         self.imageName = imageName
@@ -114,12 +114,17 @@ struct PlantCardView: View {
                     case .success(let image):
                         image.resizable().scaledToFit()
                     case .failure(let error):
-                        // Fall back to local asset; logging happens in the fallback view's onAppear
+                        // Fall back to local asset if available; logging happens in the fallback view's onAppear
                         FallbackImageView(imageName: plant.imageName, plantName: plant.name, error: error, contentMode: .fit)
                     @unknown default:
-                        Image(plant.imageName)
-                            .resizable()
-                            .scaledToFit()
+                        if let name = plant.imageName, let uiImage = UIImage(named: name) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFit()
+                        } else {
+                            Image(systemName: "leaf.fill")
+                                .resizable()
+                        }
                     }
                 }
                 .frame(width: 80, height: 80)
@@ -127,13 +132,23 @@ struct PlantCardView: View {
                 .shadow(radius: 5)
                 .id(plant.id)
             } else {
-                Image(plant.imageName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 80, height: 80)
-                    .clipShape(RoundedRectangle(cornerRadius: 15))
-                    .shadow(radius: 5)
-                    .id(plant.id)
+                if let name = plant.imageName, let uiImage = UIImage(named: name) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 80, height: 80)
+                        .clipShape(RoundedRectangle(cornerRadius: 15))
+                        .shadow(radius: 5)
+                        .id(plant.id)
+                } else {
+                    Image(systemName: "leaf.fill")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 80, height: 80)
+                        .clipShape(RoundedRectangle(cornerRadius: 15))
+                        .shadow(radius: 5)
+                        .id(plant.id)
+                }
             }
             
             VStack(alignment: .leading, spacing: 5) {
@@ -166,14 +181,14 @@ struct PlantCardView: View {
 
 // Helper fallback view that shows a local image and logs the async image error on appear.
 struct FallbackImageView: View {
-    let imageName: String
+    let imageName: String?
     let plantName: String
     let error: Error?
     let contentMode: ContentMode
 
     var body: some View {
         Group {
-            if let uiImage = UIImage(named: imageName) {
+            if let name = imageName, let uiImage = UIImage(named: name) {
                 Image(uiImage: uiImage)
                     .resizable()
             } else {
@@ -208,21 +223,34 @@ struct SessionAddRow: View {
                     case .success(let image):
                         image.resizable().scaledToFill()
                     case .failure(let error):
-                            FallbackImageView(imageName: plant.imageName, plantName: plant.name, error: error, contentMode: .fill)
+                        FallbackImageView(imageName: plant.imageName, plantName: plant.name, error: error, contentMode: .fill)
                     @unknown default:
-                        Image(plant.imageName)
-                            .resizable()
-                            .scaledToFill()
+                        if let name = plant.imageName, let uiImage = UIImage(named: name) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFill()
+                        } else {
+                            Image(systemName: "leaf.fill")
+                                .resizable()
+                        }
                     }
                 }
                 .frame(width: 44, height: 44)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             } else {
-                Image(plant.imageName)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 44, height: 44)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                if let name = plant.imageName, let uiImage = UIImage(named: name) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 44, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else {
+                    Image(systemName: "leaf.fill")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 44, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(plant.name)

@@ -135,10 +135,11 @@ struct HomeView: View {
             }
             return
         }
-        // Prefer the remote image URL from the API, fall back to a local asset name
+        // Prefer the remote image URL from the API; do not force a local fallback for every plant
         let imageURL = source.default_image?.regular_url
-        // Use the 'Monstera' asset from Assets.xcassets as the fallback
-        let imageName = "Monstera"
+        // Do not set a local asset by default — prefer the API image. If you have a specific
+        // local asset that matches the plant species, we could detect and set it here.
+        let imageName: String? = nil
         let lastWatered = "Today"
         let status = "All good"
         let statusColor: Color = .green
