@@ -154,9 +154,21 @@ class PlantStore: ObservableObject {
                 }
             }
 
-            plants = picked
+            // Fetch detailed info for each picked plant in parallel (preserves previous behavior)
+            var detailedPlants: [PerenualPlant] = []
+            await withTaskGroup(of: PerenualPlant?.self) { group in
+                for plant in picked {
+                    group.addTask { await self.fetchPlantDetails(for: plant.id) }
+                }
+                for await detailed in group {
+                    if let plant = detailed { detailedPlants.append(plant) }
+                }
+            }
+
+            // Prefer detailedPlants when available; fall back to the lightweight picked list
+            plants = detailedPlants.isEmpty ? picked : detailedPlants
             // Save successful result to disk to survive rate limits / offline
-            saveCachedPlants(detailedPlants)
+            saveCachedPlants(plants)
             errorMessage = nil
         } catch {
             // Log the error so you can inspect why the API failed
