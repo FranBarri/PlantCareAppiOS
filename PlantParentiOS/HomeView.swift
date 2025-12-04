@@ -67,7 +67,7 @@ struct HomeView: View {
                         .onAppear {
                             refreshUniquePlants()
                         }
-                        .onChange(of: store.plants.map { $0.id }) { _ in
+                        .onChange(of: store.plants.map { $0.id }) { _, _ in
                             refreshUniquePlants()
                         }
                     }
@@ -116,7 +116,10 @@ struct HomeView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .task {
-                // Removed: await store.fetchPlants()
+                // Load plants from API when the view appears.
+                // If you intentionally disabled fetching, remove this call.
+                await store.fetchPlants()
+
                 // Auto-dismiss banner after 3 seconds
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
                 await MainActor.run {
