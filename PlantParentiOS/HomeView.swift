@@ -9,6 +9,10 @@ struct HomeView: View {
     @State private var showToast: Bool = false
     @State private var toastMessage: String = ""
     @State private var toastIsError: Bool = false
+    // Carousel paging and displayed plant window
+    @State private var pageSelection: Int = 0
+    @State private var allUniquePlants: [PerenualPlant] = []
+    @State private var displayedPlants: [PerenualPlant] = []
 
     var body: some View {
         NavigationStack {
@@ -52,22 +56,63 @@ struct HomeView: View {
                     if store.isLoading {
                         ProgressView().frame(height: 300)
                     } else {
-                        // Show a deduplicated carousel (no duplicate display names)
+                        // Ensure unique list and initial displayed window
                         let uniquePlants = store.plants.uniqued(by: { (p: PerenualPlant) -> String in
                             let name = p.common_name.trimmingCharacters(in: .whitespacesAndNewlines)
                             let fallback = p.scientific_name.first ?? ""
                             return (name.isEmpty ? fallback : name).lowercased()
                         })
 
-                        TabView {
-                            ForEach(uniquePlants.prefix(8)) { plant in
+                        // Update state when source changes
+                        if uniquePlants.map({ $0.id }) != allUniquePlants.map({ $0.id }) {
+                            allUniquePlants = uniquePlants
+                            // Preserve existing displayed window if possible, otherwise take first 8
+                            if displayedPlants.isEmpty {
+                                displayedPlants = Array(allUniquePlants.prefix(8))
+                                pageSelection = 0
+                            } else {
+                                // remove any displayed plants that no longer exist
+                                displayedPlants.removeAll { dp in !allUniquePlants.contains(where: { $0.id == dp.id }) }
+                                // fill up to 8
+                                for p in allUniquePlants where displayedPlants.count < 8 && !displayedPlants.contains(where: { $0.id == p.id }) {
+                                    displayedPlants.append(p)
+                                }
+                                pageSelection = min(pageSelection, max(0, displayedPlants.count - 1))
+                            }
+                        }
+
+                        TabView(selection: $pageSelection) {
+                            ForEach(Array(displayedPlants.enumerated()), id: \.1.id) { index, plant in
                                 PlantCarouselCard(plant: plant, onAdd: { _ in
                                     addToGreenhouse(from: plant)
                                 })
+                                .tag(index)
                             }
                         }
                         .tabViewStyle(.page)
                         .frame(height: 300)
+                    }
+
+                    // When the user reaches the last page, attempt to load/rotate in a new plant
+                    .onChange(of: pageSelection) { newIndex in
+                        // Only trigger when user lands on the last displayed index
+                        guard newIndex == (displayedPlants.count - 1) else { return }
+
+                        // Find the next plant from allUniquePlants that's not currently displayed
+                        if let next = allUniquePlants.first(where: { a in !displayedPlants.contains(where: { $0.id == a.id }) }) {
+                            // If there's room, append; otherwise rotate window (drop first, append)
+                            if displayedPlants.count < 8 {
+                                displayedPlants.append(next)
+                                // Move selection to the new last item
+                                pageSelection = displayedPlants.count - 1
+                            } else {
+                                // Rotate window to show new plant at the end
+                                displayedPlants.removeFirst()
+                                displayedPlants.append(next)
+                                // Keep selection at last index to show newly appended plant
+                                pageSelection = displayedPlants.count - 1
+                            }
+                        }
                     }
 
                     // Quick Tips
