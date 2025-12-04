@@ -77,7 +77,11 @@ struct MyGreenhouseView: View {
                 .padding(.bottom, 50)
                 .alert("Remove Plant?", isPresented: $showRemoveAlert, presenting: plantToRemove) { plant in
                     Button("Remove", role: .destructive) {
-                        $greenhouse.remove(plant)
+                        // Call the store's remove method (don't use `$greenhouse` which is a binding wrapper)
+                        greenhouse.remove(plant)
+                        // Clear selection
+                        plantToRemove = nil
+                        showRemoveAlert = false
                     }
                     Button("Cancel", role: .cancel) { }
                 } message: { plant in

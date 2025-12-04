@@ -10,5 +10,9 @@ final class GreenhouseStore: ObservableObject {
         plants.append(plant)
     }
 
+    func remove(_ plant: Plant) {
+        plants.removeAll { $0.id == plant.id }
+    }
+
     func clear() { plants.removeAll() }
 }
