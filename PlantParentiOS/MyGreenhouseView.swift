@@ -25,6 +25,9 @@ struct Plant: Identifiable, Equatable, Hashable {
 struct MyGreenhouseView: View {
     @EnvironmentObject private var greenhouse: GreenhouseStore
     
+    @State private var showRemoveAlert: Bool = false
+    @State private var plantToRemove: Plant? = nil
+    
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -62,12 +65,24 @@ struct MyGreenhouseView: View {
                         .padding(.top, 40)
                     } else {
                         ForEach(greenhouse.plants) { plant in
-                            PlantCardView(plant: plant)
-                                .padding(.horizontal)
+                            PlantCardView(plant: plant, onDelete: {
+                                plantToRemove = plant
+                                showRemoveAlert = true
+                            })
+                            .padding(.horizontal)
+                            .id(plant.id)
                         }
                     }
                 }
                 .padding(.bottom, 50)
+                .alert("Remove Plant?", isPresented: $showRemoveAlert, presenting: plantToRemove) { plant in
+                    Button("Remove", role: .destructive) {
+                        $greenhouse.remove(plant)
+                    }
+                    Button("Cancel", role: .cancel) { }
+                } message: { plant in
+                    Text("Are you sure you want to remove \"\(plant.name)\" from your greenhouse?")
+                }
             }
             .background(
                 LinearGradient(
@@ -77,24 +92,13 @@ struct MyGreenhouseView: View {
                 )
                 .ignoresSafeArea()
             )
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Text("Session")
-                        .font(.headline)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Clear") {
-                        greenhouse.clear()
-                    }
-                    .disabled(greenhouse.plants.isEmpty)
-                }
-            }
         }
     }
 }
 
 struct PlantCardView: View {
     let plant: Plant
+    var onDelete: () -> Void
     
     var body: some View {
         HStack {
@@ -106,8 +110,8 @@ struct PlantCardView: View {
                     case .success(let image):
                         image.resizable().scaledToFit()
                     case .failure(let error):
-                            // Fall back to local asset; logging happens in the fallback view's onAppear
-                            FallbackImageView(imageName: plant.imageName, plantName: plant.name, errorDescription: String(describing: error), contentMode: .fit)
+                        // Fall back to local asset; logging happens in the fallback view's onAppear
+                        FallbackImageView(imageName: plant.imageName, plantName: plant.name, errorDescription: String(describing: error), contentMode: .fit)
                     @unknown default:
                         Image(plant.imageName)
                             .resizable()
@@ -117,6 +121,7 @@ struct PlantCardView: View {
                 .frame(width: 80, height: 80)
                 .clipShape(RoundedRectangle(cornerRadius: 15))
                 .shadow(radius: 5)
+                .id(plant.id)
             } else {
                 Image(plant.imageName)
                     .resizable()
@@ -124,6 +129,7 @@ struct PlantCardView: View {
                     .frame(width: 80, height: 80)
                     .clipShape(RoundedRectangle(cornerRadius: 15))
                     .shadow(radius: 5)
+                    .id(plant.id)
             }
             
             VStack(alignment: .leading, spacing: 5) {
@@ -140,6 +146,12 @@ struct PlantCardView: View {
                     .cornerRadius(10)
             }
             Spacer()
+            Button(action: onDelete) {
+                Image(systemName: "trash")
+                    .foregroundColor(.red)
+                    .imageScale(.large)
+            }
+            .buttonStyle(PlainButtonStyle())
         }
         .padding()
         .background(Color.white.opacity(0.8))

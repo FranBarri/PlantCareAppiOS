@@ -209,12 +209,7 @@ struct BannerView: View {
 
 #Preview("Sample Data") {
     let store = PlantStore()
-    store.isLoading = false
-    store.plants = [
-        PerenualPlant(id: 425, common_name: "Swiss Cheese Plant", scientific_name: ["Monstera"], watering: "Average", sunlight: ["bright indirect"], indoor: true, poisonous_to_pets: 1, default_image: PerenualPlant.DefaultImage(regular_url: "https://perenual.com/storage/species_image/425_monstera_deliciosa/og/monstera.jpg", thumbnail: nil)),
-        PerenualPlant(id: 426, common_name: "Snake Plant", scientific_name: ["Sansevieria"], watering: "Minimum", sunlight: ["low light"], indoor: true, poisonous_to_pets: 0, default_image: PerenualPlant.DefaultImage(regular_url: "https://perenual.com/storage/species_image/426_sansevieria_trifasciata/og/snakeplant.jpg", thumbnail: nil))
-    ]
-    return HomeView()
+    HomeView()
         .environmentObject(store)
         .environmentObject(GreenhouseStore())
 }
