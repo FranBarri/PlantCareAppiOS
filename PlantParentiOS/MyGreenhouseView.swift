@@ -115,7 +115,7 @@ struct PlantCardView: View {
                         image.resizable().scaledToFit()
                     case .failure(let error):
                         // Fall back to local asset; logging happens in the fallback view's onAppear
-                        FallbackImageView(imageName: plant.imageName, plantName: plant.name, errorDescription: String(describing: error), contentMode: .fit)
+                        FallbackImageView(imageName: plant.imageName, plantName: plant.name, error: error, contentMode: .fit)
                     @unknown default:
                         Image(plant.imageName)
                             .resizable()
@@ -168,16 +168,29 @@ struct PlantCardView: View {
 struct FallbackImageView: View {
     let imageName: String
     let plantName: String
-    let errorDescription: String
+    let error: Error?
     let contentMode: ContentMode
 
     var body: some View {
-        Image(imageName)
-            .resizable()
-            .aspectRatio(contentMode: contentMode)
-            .onAppear {
-                print("AsyncImage load error for \(plantName): \(errorDescription)")
+        Group {
+            if let uiImage = UIImage(named: imageName) {
+                Image(uiImage: uiImage)
+                    .resizable()
+            } else {
+                // Show a system placeholder if the named asset is missing
+                Image(systemName: "leaf.fill")
+                    .resizable()
+                    .foregroundColor(.green)
             }
+        }
+        .aspectRatio(contentMode: contentMode)
+        .onAppear {
+            // Ignore cancelled requests (code -999) to avoid noisy logs
+            if let urlError = error as? URLError, urlError.code == .cancelled { return }
+            if let e = error {
+                print("AsyncImage load error for \(plantName): \(e)")
+            }
+        }
     }
 }
 
@@ -195,7 +208,7 @@ struct SessionAddRow: View {
                     case .success(let image):
                         image.resizable().scaledToFill()
                     case .failure(let error):
-                            FallbackImageView(imageName: plant.imageName, plantName: plant.name, errorDescription: String(describing: error), contentMode: .fill)
+                            FallbackImageView(imageName: plant.imageName, plantName: plant.name, error: error, contentMode: .fill)
                     @unknown default:
                         Image(plant.imageName)
                             .resizable()

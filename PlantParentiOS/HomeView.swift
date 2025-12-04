@@ -137,7 +137,8 @@ struct HomeView: View {
         }
         // Prefer the remote image URL from the API, fall back to a local asset name
         let imageURL = source.default_image?.regular_url
-        let imageName = "monstera"
+        // Use the 'Monstera' asset from Assets.xcassets as the fallback
+        let imageName = "Monstera"
         let lastWatered = "Today"
         let status = "All good"
         let statusColor: Color = .green
