@@ -75,6 +75,7 @@ struct PerenualPlant: Codable, Identifiable {
 class PlantStore: ObservableObject {
     @Published var plants: [PerenualPlant] = []
     @Published var isLoading = true
+    @Published var errorMessage: String? = nil
 
     private let apiKey = "sk-M6ci690caf9f1d9a813339"
 
@@ -91,11 +92,18 @@ class PlantStore: ObservableObject {
         guard let url = URL(string: urlString) else { return }
 
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await URLSession.shared.data(from: url)
+            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+                // Provide more actionable debug info
+                let body = String(data: data, encoding: .utf8) ?? "(no body)"
+                print("Plant list API returned HTTP \(http.statusCode): \(body)")
+                throw URLError(.badServerResponse)
+            }
+
+            // Debug: print raw JSON when decoding fails
             // print(String(data: data, encoding: .utf8) ?? "Could not decode JSON as string")
-            let response = try JSONDecoder().decode(PerenualResponse.self, from: data)
-            // let filtered = response.data.filter { $0.sunlight != nil && !$0.sunlight!.isEmpty }
-            let selected = response.data.shuffled().prefix(8)
+            let responseObj = try JSONDecoder().decode(PerenualResponse.self, from: data)
+            let selected = responseObj.data.shuffled().prefix(8)
             var detailedPlants: [PerenualPlant] = []
             await withTaskGroup(of: PerenualPlant?.self) { group in
                 for plant in selected {
@@ -107,7 +115,9 @@ class PlantStore: ObservableObject {
             }
             plants = detailedPlants
         } catch {
-            // print("API Error: \(error)")
+            // Log the error so you can inspect why the API failed
+            print("Plant list fetch error:", error)
+            errorMessage = String(describing: error)
             // Fallback so canvas never breaks
             plants = [
                 PerenualPlant(id: 425, common_name: "Swiss Cheese Plant", scientific_name: ["Monstera"], watering: "Average", sunlight: ["bright indirect"], indoor: true, poisonous_to_pets: true, default_image: PerenualPlant.DefaultImage(regular_url: "https://perenual.com/storage/species_image/425_monstera_deliciosa/og/monstera.jpg", thumbnail: nil)),
@@ -120,7 +130,12 @@ class PlantStore: ObservableObject {
         let urlString = "https://perenual.com/api/v2/species/details/\(id)?key=\(apiKey)"
         guard let url = URL(string: urlString) else { return nil }
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await URLSession.shared.data(from: url)
+            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+                let body = String(data: data, encoding: .utf8) ?? "(no body)"
+                print("Plant detail API returned HTTP \(http.statusCode) for id \(id): \(body)")
+                return nil
+            }
             let plant = try JSONDecoder().decode(PerenualPlant.self, from: data)
             return plant
         } catch {

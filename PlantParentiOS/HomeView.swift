@@ -115,6 +115,16 @@ struct HomeView: View {
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .onChange(of: store.errorMessage) { _, new in
+                if let msg = new {
+                    toastMessage = msg
+                    toastIsError = true
+                    withAnimation(.spring()) { showToast = true }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                        withAnimation(.easeInOut) { showToast = false }
+                    }
+                }
+            }
             .task {
                 // Load plants from API when the view appears.
                 // If you intentionally disabled fetching, remove this call.
