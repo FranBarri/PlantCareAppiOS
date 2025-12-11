@@ -154,19 +154,11 @@ class PlantStore: ObservableObject {
                 }
             }
 
-            // Fetch detailed info for each picked plant in parallel (preserves previous behavior)
-            var detailedPlants: [PerenualPlant] = []
-            await withTaskGroup(of: PerenualPlant?.self) { group in
-                for plant in picked {
-                    group.addTask { await self.fetchPlantDetails(for: plant.id) }
-                }
-                for await detailed in group {
-                    if let plant = detailed { detailedPlants.append(plant) }
-                }
-            }
-
-            // Prefer detailedPlants when available; fall back to the lightweight picked list
-            plants = detailedPlants.isEmpty ? picked : detailedPlants
+            // NOTE: Detailed per-plant requests are disabled to avoid exceeding daily API limits.
+            // Previously we fetched details for each picked plant in parallel using `fetchPlantDetails(for:)`.
+            // That resulted in up to 8 additional API calls per refresh. To respect the API quota,
+            // we now use the list response directly (the `picked` array) and do not call the detail endpoint.
+            plants = picked
             // Save successful result to disk to survive rate limits / offline
             saveCachedPlants(plants)
             errorMessage = nil
@@ -219,22 +211,22 @@ class PlantStore: ObservableObject {
         }
     }
 
-    func fetchPlantDetails(for id: Int) async -> PerenualPlant? {
-        let urlString = "https://perenual.com/api/v2/species/details/\(id)?key=\(apiKey)"
-        guard let url = URL(string: urlString) else { return nil }
-        do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-                let body = String(data: data, encoding: .utf8) ?? "(no body)"
-                print("Plant detail API returned HTTP \(http.statusCode) for id \(id): \(body)")
-                return nil
-            }
-            let plant = try JSONDecoder().decode(PerenualPlant.self, from: data)
-            return plant
-        } catch {
-            print("Detail API Error for id \(id):", error)
-            return nil
-        }
-    }
+    // func fetchPlantDetails(for id: Int) async -> PerenualPlant? {
+    //     let urlString = "https://perenual.com/api/v2/species/details/\(id)?key=\(apiKey)"
+    //     guard let url = URL(string: urlString) else { return nil }
+    //     do {
+    //         let (data, response) = try await URLSession.shared.data(from: url)
+    //         if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+    //             let body = String(data: data, encoding: .utf8) ?? "(no body)"
+    //             print("Plant detail API returned HTTP \(http.statusCode) for id \(id): \(body)")
+    //             return nil
+    //         }
+    //         let plant = try JSONDecoder().decode(PerenualPlant.self, from: data)
+    //         return plant
+    //     } catch {
+    //         print("Detail API Error for id \(id):", error)
+    //         return nil
+    //     }
+    // }
 }
 
