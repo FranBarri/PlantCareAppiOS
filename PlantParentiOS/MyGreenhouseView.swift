@@ -106,7 +106,7 @@ struct PlantCardView: View {
     
     var body: some View {
         HStack {
-            if let urlString = plant.imageURL, let url = URL(string: urlString) {
+            if let urlString = plant.imageURL, !urlString.isEmpty, let url = URL(string: urlString) {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .empty:
@@ -215,7 +215,7 @@ struct SessionAddRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            if let urlString = plant.imageURL, let url = URL(string: urlString) {
+            if let urlString = plant.imageURL, !urlString.isEmpty, let url = URL(string: urlString) {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .empty:

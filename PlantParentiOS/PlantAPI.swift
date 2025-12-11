@@ -89,7 +89,7 @@ class PlantStore: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        let urlString = "https://perenual.com/api/species-list?key=\(apiKey)&indoor=1"
+        let urlString = "https://perenual.com/api/species-list?key=\(apiKey)&page=1&indoor=1"
         
         guard let url = URL(string: urlString) else { return }
 

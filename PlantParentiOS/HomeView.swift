@@ -126,11 +126,11 @@ struct HomeView: View {
                 }
             }
             .task {
-                // Load plants from API when the view appears.
-                // If you intentionally disabled fetching, remove this call.
-                await store.fetchPlants()
-
-                // Auto-dismiss banner after 3 seconds
+                // Only fetch if we don't already have plants loaded
+                if store.plants.isEmpty {
+                    await store.fetchPlants()
+                }
+                // Auto-dismiss banner after 3 seconds (keep this part as is)
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
                 await MainActor.run {
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) {
@@ -160,9 +160,7 @@ struct HomeView: View {
             return
         }
         // Prefer the remote image URL from the API; do not force a local fallback for every plant
-        let imageURL = source.default_image?.regular_url
-        // Do not set a local asset by default — prefer the API image. If you have a specific
-        // local asset that matches the plant species, we could detect and set it here.
+        let imageURL = source.default_image?.regular_url // Direct API image, no fallback
         let imageName: String? = nil
         let lastWatered = "Today"
         let status = "All good"
