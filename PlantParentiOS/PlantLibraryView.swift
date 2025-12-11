@@ -14,9 +14,16 @@ struct PlantLibraryView: View {
     
     var body: some View {
         NavigationStack {
-            
             VStack(spacing: 0) {
                 VStack(spacing: 8) {
+                    //Header
+                       VStack(spacing:8){
+                           Text("Plant Library")
+                               .font(.title)
+                               .fontWeight(.bold)
+                               .padding()
+                       }
+                    Divider()
                     // Search
                     HStack {
                         Image(systemName: "magnifyingglass")
