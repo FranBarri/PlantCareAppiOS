@@ -174,7 +174,7 @@ struct PlantDetailPlaceholder: View {
         let name = baseName.localizedCapitalized
         
         // Prevent duplicates (case-insensitive)
-        let exists = greenhouse.plants.contains { $0.name.lowercased() == name.lowercased() }
+        let exists = greenhouse.plants.contains { $0.displayName.lowercased() == name.lowercased() }
         if exists {
             toastMessage = "\(name) is already in your greenhouse"
             toastIsError = true
@@ -187,18 +187,18 @@ struct PlantDetailPlaceholder: View {
         
         let imageURL = detail.default_image?.regular_url
         let imageName: String? = nil
-        let lastWatered = "Today"
-        let status = "All good"
-        let statusColor: Color = .green
-        
-        let plant = Plant(
-            id: UUID(),
-            name: name,
-            imageName: imageName,
+        // Use current date for dateAdded and lastWatered
+        let plant = GreenhousePlant(
+            plantID: detail.id,
+            displayName: name,
             imageURL: imageURL,
-            lastWatered: lastWatered,
-            status: status,
-            statusColor: statusColor
+            imageName: imageName,
+            nickname: nil,
+            dateAdded: Date(),
+            notes: nil,
+            quantity: 1,
+            lastWatered: Date(),
+            wateringIntervalDays: nil
         )
         greenhouse.add(plant)
         
