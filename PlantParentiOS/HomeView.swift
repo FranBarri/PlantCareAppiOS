@@ -1,5 +1,9 @@
 import SwiftUI
 
+// Import QuickTip
+// If needed, change to @testable import if using in tests
+// import QuickTip (not needed for same module)
+
 struct HomeView: View {
     @StateObject private var store = PlantStore()
     @EnvironmentObject private var greenhouse: GreenhouseStore
@@ -9,6 +13,34 @@ struct HomeView: View {
     @State private var showToast: Bool = false
     @State private var toastMessage: String = ""
     @State private var toastIsError: Bool = false
+    // Displayed plants for the carousel (8 random, deduplicated)
+    @State private var displayedPlants: [PerenualPlant] = []
+
+    // Store random tips for this view
+    @State private var quickTips: [QuickTip] = QuickTipStore.randomTips(count: 2)
+
+    // Helper to find the next watering plant info
+    private var nextWateringPlantInfo: (plant: GreenhousePlant, nextWatering: Date)? {
+        // Filter plants that have lastWatered or wateringIntervalDays
+        let now = Date()
+        
+        // Calculate next watering date for each plant
+        // If lastWatered or wateringIntervalDays missing, assume default interval 7 days with lastWatered = dateAdded or now
+        let candidates: [(GreenhousePlant, Date)] = greenhouse.plants.compactMap { plant in
+            let intervalDays = plant.wateringIntervalDays ?? 7
+            
+            // Prefer lastWatered, fallback to dateAdded, fallback to now
+            let lastWatered = plant.lastWatered ?? plant.dateAdded ?? now
+            
+            let nextWatering = Calendar.current.date(byAdding: .day, value: intervalDays, to: lastWatered)!
+            
+            // Include both overdue and future watering dates
+            return (plant, nextWatering)
+        }
+        
+        // Find the one with soonest next watering date (earliest nextWatering, even if in the past)
+        return candidates.min(by: { $0.1 < $1.1 })
+    }
 
     var body: some View {
         NavigationStack {
@@ -33,11 +65,19 @@ struct HomeView: View {
                         VStack(alignment: .leading) {
                             Text("Next Watering Reminder")
                                 .font(.subheadline).bold()
-                            Text("Fiddle Leaf Fig")
-                                .font(.headline)
-                            Text("Tomorrow, 9:00 AM")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            if let info = nextWateringPlantInfo {
+                                Text(info.plant.displayName)
+                                    .font(.headline)
+                                Text(info.nextWatering, style: .date) // Show date only
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Text("No plants needing watering soon")
+                                    .font(.headline)
+                                Text("Add plants to your greenhouse")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         Spacer()
                         Image(systemName: "chevron.right")
@@ -52,8 +92,9 @@ struct HomeView: View {
                     if store.isLoading {
                         ProgressView().frame(height: 300)
                     } else {
+                        // Render the current selected random plants
                         TabView {
-                            ForEach(store.plants.prefix(8)) { plant in
+                            ForEach(displayedPlants) { plant in
                                 PlantCarouselCard(plant: plant, onAdd: { _ in
                                     addToGreenhouse(from: plant)
                                 })
@@ -61,15 +102,23 @@ struct HomeView: View {
                         }
                         .tabViewStyle(.page)
                         .frame(height: 300)
+                        .onAppear {
+                            refreshUniquePlants()
+                        }
+                        .onChange(of: store.plants.map { $0.id }) { _, _ in
+                            refreshUniquePlants()
+                        }
                     }
+
+                    // test
 
                     // Quick Tips
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Quick Tips")
                             .font(.title3).bold()
-
-                        TipRow(icon: "drop.fill", title: "Watering", text: "Water when the top inch of soil is dry.\nAvoid Overwatering.")
-                        TipRow(icon: "sun.max.fill", title: "Sunlight", text: "Rotate your plants weekly for even growth towards the light.")
+                        ForEach(quickTips) { tip in
+                            TipRow(icon: tip.icon, title: tip.title, text: tip.text)
+                        }
                     }
                     .padding(.horizontal)
                 }
@@ -104,9 +153,22 @@ struct HomeView: View {
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .onChange(of: store.errorMessage) { _, new in
+                if let msg = new {
+                    toastMessage = msg
+                    toastIsError = true
+                    withAnimation(.spring()) { showToast = true }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                        withAnimation(.easeInOut) { showToast = false }
+                    }
+                }
+            }
             .task {
-                // Removed: await store.fetchPlants()
-                // Auto-dismiss banner after 3 seconds
+                // Only fetch if we don't already have plants loaded
+                if store.plants.isEmpty {
+                    await store.fetchPlants()
+                }
+                // Auto-dismiss banner after 3 seconds (keep this part as is)
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
                 await MainActor.run {
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) {
@@ -118,16 +180,12 @@ struct HomeView: View {
     }
     
     private func addToGreenhouse(from source: PerenualPlant) {
-        // Build a user-friendly display name: trim whitespace, fall back to scientific name, and capitalize words
-        let commonRaw = source.common_name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let scientificRaw = source.scientific_name.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let baseName = commonRaw.isEmpty ? (scientificRaw.isEmpty ? "Unknown" : scientificRaw) : commonRaw
-        let name = baseName.localizedCapitalized
+        let displayName = source.displayName
 
-        // Duplicate check should be case-insensitive
-        let exists = greenhouse.plants.contains { $0.name.lowercased() == name.lowercased() }
+        // Duplicate check should be case-insensitive on displayName
+        let exists = greenhouse.plants.contains { $0.displayName.lowercased() == displayName.lowercased() }
         if exists {
-            toastMessage = "\(name) is already in your greenhouse"
+            toastMessage = "\(displayName) is already in your greenhouse"
             toastIsError = true
             withAnimation(.spring()) { showToast = true }
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
@@ -135,22 +193,73 @@ struct HomeView: View {
             }
             return
         }
-        // Prefer the remote image URL from the API; do not force a local fallback for every plant
-        let imageURL = source.default_image?.regular_url
-        // Do not set a local asset by default — prefer the API image. If you have a specific
-        // local asset that matches the plant species, we could detect and set it here.
-        let imageName: String? = nil
-        let lastWatered = "Today"
-        let status = "All good"
-        let statusColor: Color = .green
-        let plant = Plant(id: UUID(), name: name, imageName: imageName, imageURL: imageURL, lastWatered: lastWatered, status: status, statusColor: statusColor)
+        // Create and add a GreenhousePlant
+        let plant = GreenhousePlant(
+            plantID: source.id,
+            displayName: displayName,
+            imageURL: source.default_image?.regular_url,
+            imageName: nil,
+            nickname: nil,
+            dateAdded: Date(),
+            notes: nil,
+            quantity: 1
+        )
         greenhouse.add(plant)
-        toastMessage = "Added \(name) to your greenhouse"
+        toastMessage = "Added \(displayName) to your greenhouse"
         toastIsError = false
         withAnimation(.spring()) { showToast = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
             withAnimation(.easeInOut) { showToast = false }
         }
+    }
+
+    private func deduplicationKey(for plant: PerenualPlant) -> String {
+        // Mirror PlantAPI.keyFor: trim and lowercase before checking emptiness,
+        // and fall back to scientific name when common name is empty.
+        let common = plant.common_name
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        if !common.isEmpty {
+            return common
+        }
+
+        let scientific = (plant.scientific_name.first ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        return scientific
+    }
+
+    private func refreshUniquePlants() {
+        // Build unique list by display name and pick 8 random plants from it
+        let uniquePlants = store.plants.uniqued(by: { (p: PerenualPlant) -> String in
+            return deduplicationKey(for: p)
+        })
+
+        // Shuffle and choose up to 8 unique plants
+        let picked = Array(uniquePlants.shuffled().prefix(8))
+
+        // Update displayedPlants only when changed
+        if picked.map({ $0.id }) != displayedPlants.map({ $0.id }) {
+            displayedPlants = picked
+        }
+    }
+}
+
+// Small helper to deduplicate arrays by a selector key
+extension Array {
+    func uniqued<T: Hashable>(by keySelector: (Element) -> T) -> [Element] {
+        var seen = Set<T>()
+        var result: [Element] = []
+        for item in self {
+            let key = keySelector(item)
+            if !seen.contains(key) {
+                seen.insert(key)
+                result.append(item)
+            }
+        }
+        return result
     }
 }
 

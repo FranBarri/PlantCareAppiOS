@@ -126,14 +126,48 @@ struct PerenualPlantDetail: Codable, Identifiable {
 class PlantStore: ObservableObject {
     @Published var plants: [PerenualPlant] = []
     @Published var isLoading = true
-    
+
     @Published var selectedPlant: PerenualPlant?
     @Published var selectedPlantDetail: PerenualPlantDetail?
 
+    // Error message for UI
+    @Published var errorMessage: String? = nil
+
     private let apiKey = "sk-M6ci690caf9f1d9a813339"
-    
+    private let cacheFileName = "perenual_cached_plants.json"
+
     init() {
         Task { await fetchPlants() }
+    }
+
+    // Save plants to cache
+    private func saveCachedPlants(_ plants: [PerenualPlant]) {
+        do {
+            let data = try JSONEncoder().encode(plants)
+            let url = cacheFileURL()
+            try data.write(to: url, options: [.atomic])
+        } catch {
+            print("Failed to save cached plants: \(error)")
+        }
+    }
+
+    // Load plants from cache
+    private func loadCachedPlants() -> [PerenualPlant]? {
+        do {
+            let url = cacheFileURL()
+            let data = try Data(contentsOf: url)
+            let decoded = try JSONDecoder().decode([PerenualPlant].self, from: data)
+            return decoded
+        } catch {
+            print("Failed to load cached plants: \(error)")
+            return nil
+        }
+    }
+
+    // Helper to get cache file URL
+    private func cacheFileURL() -> URL {
+        let urls = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
+        return urls[0].appendingPathComponent(cacheFileName)
     }
     
     func fetchPlants() async {
@@ -143,24 +177,85 @@ class PlantStore: ObservableObject {
         guard let url = URL(string: urlString) else { return }
         
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            // print(String(data: data, encoding: .utf8) ?? "Could not decode JSON as string")
-            let response = try JSONDecoder().decode(PerenualResponse.self, from: data)
-            // let filtered = response.data.filter { $0.sunlight != nil && !$0.sunlight!.isEmpty }
-            let selected = response.data.shuffled().prefix(8)
-            var detailedPlants: [PerenualPlant] = []
-            await withTaskGroup(of: PerenualPlant?.self) { group in
-                for plant in selected {
-                    group.addTask { await self.fetchPlantDetails(for: plant.id) }
+            let (data, response) = try await URLSession.shared.data(from: url)
+            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+                // Handle rate limiting specially
+                if http.statusCode == 429 {
+                    // Try to extract Retry-After from header or body
+                    var retrySeconds: Int? = nil
+                    if let retryHeader = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Retry-After"), let n = Int(retryHeader) {
+                        retrySeconds = n
+                    } else if let bodyObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let r = bodyObj["Retry-After"] as? Int {
+                        retrySeconds = r
+                    }
+
+                    let waitText = retrySeconds.map { "Please wait \($0) seconds before retrying." } ?? "Please try again later."
+                    print("Plant list API returned HTTP 429: \(String(data: data, encoding: .utf8) ?? "(no body)"))")
+                    errorMessage = "Rate limit exceeded. \(waitText)"
+
+                    // Try to load cached plants; if available, use them so UI remains useful
+                    if let cached = loadCachedPlants() {
+                        plants = cached
+                    }
+                    return
                 }
-                for await detailed in group {
-                    if let plant = detailed { detailedPlants.append(plant) }
+
+                // For other non-2xx responses provide debug info
+                let body = String(data: data, encoding: .utf8) ?? "(no body)"
+                print("Plant list API returned HTTP \(http.statusCode): \(body)")
+                throw URLError(.badServerResponse)
+            }
+
+            // Decode response and pick up to 8 random plants with unique display names
+            let responseObj = try JSONDecoder().decode(PerenualResponse.self, from: data)
+
+            // Shuffle the full list, then pick plants while avoiding duplicate display names
+            let shuffled = responseObj.data.shuffled()
+            var picked: [PerenualPlant] = []
+            var seenNames = Set<String>()
+
+            func keyFor(_ p: PerenualPlant) -> String {
+                let name = p.common_name.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !name.isEmpty { return name.lowercased() }
+                return (p.scientific_name.first ?? "").lowercased()
+            }
+
+            for plant in shuffled {
+                let key = keyFor(plant)
+                if !key.isEmpty && !seenNames.contains(key) {
+                    picked.append(plant)
+                    seenNames.insert(key)
+                }
+                if picked.count == 8 { break }
+            }
+
+            // If we couldn't find 8 unique names, fill the remainder with any items (avoid empty list)
+            if picked.count < 8 {
+                for plant in shuffled where !picked.contains(where: { $0.id == plant.id }) {
+                    picked.append(plant)
+                    if picked.count == 8 { break }
                 }
             }
-            plants = detailedPlants
+
+            // NOTE: Detailed per-plant requests are disabled to avoid exceeding daily API limits.
+            // Previously we fetched details for each picked plant in parallel using `fetchPlantDetails(for:)`.
+            // That resulted in up to 8 additional API calls per refresh. To respect the API quota,
+            // we now use the list response directly (the `picked` array) and do not call the detail endpoint.
+            plants = picked
+            // Save successful result to disk to survive rate limits / offline
+            saveCachedPlants(plants)
+            errorMessage = nil
         } catch {
-            // print("API Error: \(error)")
-            // Fallback so canvas never breaks
+            // Log the error so you can inspect why the API failed
+            print("Plant list fetch error:", error)
+            errorMessage = String(describing: error)
+            // Try to load cached plants as a fallback before using the sample data
+            if let cached = loadCachedPlants() {
+                plants = cached
+                return
+            }
+
+            // Fallback sample so canvas never breaks
             plants = [
                 PerenualPlant(id: 425, common_name: "Swiss Cheese Plant", scientific_name: ["Monstera"], watering: "Average", sunlight: ["bright indirect"], indoor: true, poisonous_to_pets: true, default_image: PerenualPlant.DefaultImage(regular_url: "https://perenual.com/storage/species_image/425_monstera_deliciosa/og/monstera.jpg", thumbnail: nil)),
                 PerenualPlant(id: 426, common_name: "Snake Plant", scientific_name: ["Sansevieria"], watering: "Minimum", sunlight: ["low light"], indoor: true, poisonous_to_pets: false, default_image: PerenualPlant.DefaultImage(regular_url: "https://perenual.com/storage/species_image/426_sansevieria_trifasciata/og/snakeplant.jpg", thumbnail: nil))
@@ -249,5 +344,23 @@ class PlantStore: ObservableObject {
             }
         }
     }
+
+    // func fetchPlantDetails(for id: Int) async -> PerenualPlant? {
+    //     let urlString = "https://perenual.com/api/v2/species/details/\(id)?key=\(apiKey)"
+    //     guard let url = URL(string: urlString) else { return nil }
+    //     do {
+    //         let (data, response) = try await URLSession.shared.data(from: url)
+    //         if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+    //             let body = String(data: data, encoding: .utf8) ?? "(no body)"
+    //             print("Plant detail API returned HTTP \(http.statusCode) for id \(id): \(body)")
+    //             return nil
+    //         }
+    //         let plant = try JSONDecoder().decode(PerenualPlant.self, from: data)
+    //         return plant
+    //     } catch {
+    //         print("Detail API Error for id \(id):", error)
+    //         return nil
+    //     }
+    // }
 }
 
