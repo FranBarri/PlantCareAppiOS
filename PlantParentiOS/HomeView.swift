@@ -34,15 +34,11 @@ struct HomeView: View {
             
             let nextWatering = Calendar.current.date(byAdding: .day, value: intervalDays, to: lastWatered)!
             
-            // Only future or today watering dates
-            if nextWatering >= now {
-                return (plant, nextWatering)
-            } else {
-                return nil
-            }
+            // Include both overdue and future watering dates
+            return (plant, nextWatering)
         }
         
-        // Find the one with soonest next watering date
+        // Find the one with soonest next watering date (earliest nextWatering, even if in the past)
         return candidates.min(by: { $0.1 < $1.1 })
     }
 
