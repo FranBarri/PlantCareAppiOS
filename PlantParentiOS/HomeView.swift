@@ -12,6 +12,33 @@ struct HomeView: View {
     // Displayed plants for the carousel (8 random, deduplicated)
     @State private var displayedPlants: [PerenualPlant] = []
 
+    // Helper to find the next watering plant info
+    private var nextWateringPlantInfo: (plant: GreenhousePlant, nextWatering: Date)? {
+        // Filter plants that have lastWatered or wateringIntervalDays
+        let now = Date()
+        
+        // Calculate next watering date for each plant
+        // If lastWatered or wateringIntervalDays missing, assume default interval 7 days with lastWatered = dateAdded or now
+        let candidates: [(GreenhousePlant, Date)] = greenhouse.plants.compactMap { plant in
+            let intervalDays = plant.wateringIntervalDays ?? 7
+            
+            // Prefer lastWatered, fallback to dateAdded, fallback to now
+            let lastWatered = plant.lastWatered ?? plant.dateAdded ?? now
+            
+            let nextWatering = Calendar.current.date(byAdding: .day, value: intervalDays, to: lastWatered)!
+            
+            // Only future or today watering dates
+            if nextWatering >= now {
+                return (plant, nextWatering)
+            } else {
+                return nil
+            }
+        }
+        
+        // Find the one with soonest next watering date
+        return candidates.min(by: { $0.1 < $1.1 })
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -35,11 +62,19 @@ struct HomeView: View {
                         VStack(alignment: .leading) {
                             Text("Next Watering Reminder")
                                 .font(.subheadline).bold()
-                            Text("Fiddle Leaf Fig")
-                                .font(.headline)
-                            Text("Tomorrow, 9:00 AM")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            if let info = nextWateringPlantInfo {
+                                Text(info.plant.displayName)
+                                    .font(.headline)
+                                Text(info.nextWatering, style: .date) // Show date only
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Text("No plants needing watering soon")
+                                    .font(.headline)
+                                Text("Add plants to your greenhouse")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         Spacer()
                         Image(systemName: "chevron.right")
@@ -142,16 +177,12 @@ struct HomeView: View {
     }
     
     private func addToGreenhouse(from source: PerenualPlant) {
-        // Build a user-friendly display name: trim whitespace, fall back to scientific name, and capitalize words
-        let commonRaw = source.common_name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let scientificRaw = source.scientific_name.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let baseName = commonRaw.isEmpty ? (scientificRaw.isEmpty ? "Unknown" : scientificRaw) : commonRaw
-        let name = baseName.localizedCapitalized
+        let displayName = source.displayName
 
-        // Duplicate check should be case-insensitive
-        let exists = greenhouse.plants.contains { $0.name.lowercased() == name.lowercased() }
+        // Duplicate check should be case-insensitive on displayName
+        let exists = greenhouse.plants.contains { $0.displayName.lowercased() == displayName.lowercased() }
         if exists {
-            toastMessage = "\(name) is already in your greenhouse"
+            toastMessage = "\(displayName) is already in your greenhouse"
             toastIsError = true
             withAnimation(.spring()) { showToast = true }
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
@@ -159,15 +190,19 @@ struct HomeView: View {
             }
             return
         }
-        // Prefer the remote image URL from the API; do not force a local fallback for every plant
-        let imageURL = source.default_image?.regular_url // Direct API image, no fallback
-        let imageName: String? = nil
-        let lastWatered = "Today"
-        let status = "All good"
-        let statusColor: Color = .green
-        let plant = Plant(id: UUID(), name: name, imageName: imageName, imageURL: imageURL, lastWatered: lastWatered, status: status, statusColor: statusColor)
+        // Create and add a GreenhousePlant
+        let plant = GreenhousePlant(
+            plantID: source.id,
+            displayName: displayName,
+            imageURL: source.default_image?.regular_url,
+            imageName: nil,
+            nickname: nil,
+            dateAdded: Date(),
+            notes: nil,
+            quantity: 1
+        )
         greenhouse.add(plant)
-        toastMessage = "Added \(name) to your greenhouse"
+        toastMessage = "Added \(displayName) to your greenhouse"
         toastIsError = false
         withAnimation(.spring()) { showToast = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {

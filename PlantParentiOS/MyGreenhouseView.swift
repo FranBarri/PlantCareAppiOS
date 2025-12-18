@@ -1,32 +1,10 @@
 import SwiftUI
 
-struct Plant: Identifiable, Equatable, Hashable {
-    let id: UUID
-    let name: String
-    // Local asset name fallback
-    let imageName: String?
-    // Remote image URL (preferred if available)
-    let imageURL: String?
-    let lastWatered: String
-    let status: String
-    let statusColor: Color
-
-    init(id: UUID = UUID(), name: String, imageName: String? = nil, imageURL: String? = nil, lastWatered: String, status: String, statusColor: Color) {
-        self.id = id
-        self.name = name
-        self.imageName = imageName
-        self.imageURL = imageURL
-        self.lastWatered = lastWatered
-        self.status = status
-        self.statusColor = statusColor
-    }
-}
-
 struct MyGreenhouseView: View {
     @EnvironmentObject private var greenhouse: GreenhouseStore
     
     @State private var showRemoveAlert: Bool = false
-    @State private var plantToRemove: Plant? = nil
+    @State private var plantToRemove: GreenhousePlant? = nil
     
     var body: some View {
         NavigationStack {
@@ -68,6 +46,8 @@ struct MyGreenhouseView: View {
                             PlantCardView(plant: plant, onDelete: {
                                 plantToRemove = plant
                                 showRemoveAlert = true
+                            }, onWatered: {
+                                greenhouse.markWatered(for: plant)
                             })
                             .padding(.horizontal)
                             .id(plant.id)
@@ -77,15 +57,13 @@ struct MyGreenhouseView: View {
                 .padding(.bottom, 50)
                 .alert("Remove Plant?", isPresented: $showRemoveAlert, presenting: plantToRemove) { plant in
                     Button("Remove", role: .destructive) {
-                        // Call the store's remove method (don't use `$greenhouse` which is a binding wrapper)
                         greenhouse.remove(plant)
-                        // Clear selection
                         plantToRemove = nil
                         showRemoveAlert = false
                     }
                     Button("Cancel", role: .cancel) { }
                 } message: { plant in
-                    Text("Are you sure you want to remove \"\(plant.name)\" from your greenhouse?")
+                    Text("Are you sure you want to remove \"\(plant.displayName)\" from your greenhouse?")
                 }
             }
             .background(
@@ -101,8 +79,9 @@ struct MyGreenhouseView: View {
 }
 
 struct PlantCardView: View {
-    let plant: Plant
+    let plant: GreenhousePlant
     var onDelete: () -> Void
+    var onWatered: () -> Void
     
     var body: some View {
         HStack {
@@ -114,8 +93,7 @@ struct PlantCardView: View {
                     case .success(let image):
                         image.resizable().scaledToFit()
                     case .failure(let error):
-                        // Fall back to local asset if available; logging happens in the fallback view's onAppear
-                        FallbackImageView(imageName: plant.imageName, plantName: plant.name, error: error, contentMode: .fit)
+                        FallbackImageView(imageName: plant.imageName, plantName: plant.displayName, error: error, contentMode: .fit)
                     @unknown default:
                         if let name = plant.imageName, let uiImage = UIImage(named: name) {
                             Image(uiImage: uiImage)
@@ -152,17 +130,21 @@ struct PlantCardView: View {
             }
             
             VStack(alignment: .leading, spacing: 5) {
-                Text(plant.name)
+                Text(plant.displayName)
                     .font(.headline)
-                Text("Last watered: \(plant.lastWatered)")
+                Text("Last watered: \(plant.lastWatered != nil ? Self.dateFormatter.string(from: plant.lastWatered!) : "Never")")
                     .font(.subheadline)
                     .foregroundColor(.gray)
-                Text(plant.status)
+                Text("All good")
                     .font(.subheadline)
                     .padding(5)
-                    .background(plant.statusColor.opacity(0.2))
-                    .foregroundColor(plant.statusColor)
+                    .background(Color.green.opacity(0.2))
+                    .foregroundColor(.green)
                     .cornerRadius(10)
+                Button("Mark as Watered") {
+                    onWatered()
+                }
+                .buttonStyle(.borderedProminent)
             }
             Spacer()
             Button(action: onDelete) {
@@ -177,6 +159,13 @@ struct PlantCardView: View {
         .cornerRadius(20)
         .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 5)
     }
+    
+    private static let dateFormatter: DateFormatter = {
+        let df = DateFormatter()
+        df.dateStyle = .medium
+        df.timeStyle = .none
+        return df
+    }()
 }
 
 // Helper fallback view that shows a local image and logs the async image error on appear.
@@ -210,7 +199,7 @@ struct FallbackImageView: View {
 }
 
 struct SessionAddRow: View {
-    let plant: Plant
+    let plant: GreenhousePlant
     var onAdd: () -> Void
 
     var body: some View {
@@ -223,7 +212,7 @@ struct SessionAddRow: View {
                     case .success(let image):
                         image.resizable().scaledToFill()
                     case .failure(let error):
-                        FallbackImageView(imageName: plant.imageName, plantName: plant.name, error: error, contentMode: .fill)
+                        FallbackImageView(imageName: plant.imageName, plantName: plant.displayName, error: error, contentMode: .fill)
                     @unknown default:
                         if let name = plant.imageName, let uiImage = UIImage(named: name) {
                             Image(uiImage: uiImage)
@@ -253,11 +242,11 @@ struct SessionAddRow: View {
                 }
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(plant.name)
+                Text(plant.displayName)
                     .font(.subheadline)
-                Text(plant.status)
+                Text("All good")
                     .font(.caption)
-                    .foregroundStyle(plant.statusColor)
+                    .foregroundColor(.green)
             }
             Spacer()
             Button(action: onAdd) {
