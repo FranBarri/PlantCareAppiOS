@@ -2,6 +2,7 @@
 import Foundation
 import Combine
 
+// MARK: - List API models
 struct PerenualResponse: Codable {
     let data: [PerenualPlant]
     let to: Int
@@ -28,7 +29,7 @@ struct PerenualPlant: Codable, Identifiable {
     
     var sunLightText: String {
         guard let sunlight = sunlight, !sunlight.isEmpty else { return "Any light" }
-        return sunlight.map {$0.capitalized }.joined(separator: ", ")
+        return sunlight.map { $0.capitalized }.joined(separator: ", ")
     }
 
     struct DefaultImage: Codable {
@@ -71,28 +72,76 @@ struct PerenualPlant: Codable, Identifiable {
     }
 }
 
+// MARK: - Detail API model
+struct PerenualPlantDetail: Codable, Identifiable {
+    let id: Int
+    let common_name: String
+    let scientific_name: [String]
+    let other_name: [String]?
+    let family: String?
+    let origin: [String]?
+    let type: String?
+    let cycle: String?
+    let watering: String?
+    let sunlight: [String]?
+    let indoor: Bool?
+    let poisonous_to_pets: Int?
+    
+    let default_image: PerenualPlant.DefaultImage?
+    
+    let watering_general_benchmark: WateringBenchmark?
+    let dimensions: Dimensions?
+
+    
+    struct WateringBenchmark: Codable {
+        let value: String?
+        let unit: String?
+    }
+
+    struct Dimensions: Codable {
+        let type: String?
+        let min_value: Double?
+        let max_value: Double?
+        let unit: String?
+    }
+    
+    var displayName: String { common_name.capitalized }
+    var sunLightText: String {
+        guard let sunlight = sunlight, !sunlight.isEmpty else { return "Any light" }
+        return sunlight.map { $0.capitalized }.joined(separator: ", ")
+    }
+    
+    var wateringFrequencyText: String {
+        if let bench = watering_general_benchmark,
+           let v = bench.value, !v.isEmpty,
+           let unit = bench.unit, !unit.isEmpty {
+            return "Every \(v) \(unit)"
+        }
+        return (watering?.capitalized) ?? "Watering"
+    }
+}
+
+// MARK: - Store
 @MainActor
 class PlantStore: ObservableObject {
     @Published var plants: [PerenualPlant] = []
     @Published var isLoading = true
-    @Published var errorMessage: String? = nil
+    
+    @Published var selectedPlant: PerenualPlant?
+    @Published var selectedPlantDetail: PerenualPlantDetail?
 
     private let apiKey = "sk-M6ci690caf9f1d9a813339"
-    // Simple disk cache filename for the last successful plant list
-    private let cacheFileName = "plants_cache.json"
-
+    
     init() {
         Task { await fetchPlants() }
     }
-
+    
     func fetchPlants() async {
         isLoading = true
         defer { isLoading = false }
-
-        let urlString = "https://perenual.com/api/species-list?key=\(apiKey)&page=1&indoor=1"
-        
+        let urlString = "https://perenual.com/api/species-list?page=1&key=\(apiKey)&indoor=1"
         guard let url = URL(string: urlString) else { return }
-
+        
         do {
             let (data, response) = try await URLSession.shared.data(from: url)
             if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
@@ -179,35 +228,86 @@ class PlantStore: ObservableObject {
             ]
         }
     }
-
-    // MARK: - Simple disk cache for plant results
-    private func cacheFileURL() -> URL? {
-        let fm = FileManager.default
-        if let caches = fm.urls(for: .cachesDirectory, in: .userDomainMask).first {
-            return caches.appendingPathComponent(cacheFileName)
-        }
-        return nil
-    }
-
-    private func saveCachedPlants(_ plants: [PerenualPlant]) {
-        guard let url = cacheFileURL() else { return }
+    
+    func fetchPlant(id: Int) async {
+        isLoading = true
+        selectedPlant = nil
+        defer { isLoading = false }
+        
+        let urlString = "https://perenual.com/api/species/details/\(id)?key=\(apiKey)"
+        guard let url = URL(string: urlString) else { return }
+        
         do {
-            let data = try JSONEncoder().encode(plants)
-            try data.write(to: url, options: [.atomic])
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let plant = try JSONDecoder().decode(PerenualPlant.self, from: data)
+            selectedPlant = plant
         } catch {
-            print("Failed to save plant cache:", error)
+            print("Detail API Error(id=\(id)): \(error)")
+            // Fallback
+            if id == 425 || id == 426 {
+                selectedPlant = PerenualPlant(
+                    id: id,
+                    common_name: id == 425 ? "Swiss Cheese Plant" : "Snake Plant",
+                    scientific_name: id == 425 ? ["Monstera"] : ["Sansevieria"],
+                    watering: id == 425 ? "Average" : "Minimum",
+                    sunlight: id == 425 ? ["bright indirect"] : ["low light"],
+                    indoor: true,
+                    poisonous_to_pets: id == 425 ? 1 : 0,
+                    default_image: PerenualPlant.DefaultImage(
+                        regular_url: id == 425
+                        ? "https://perenual.com/storage/species_image/425_monstera_deliciosa/og/monstera.jpg"
+                        : "https://perenual.com/storage/species_image/426_sansevieria_trifasciata/og/snakeplant.jpg",
+                        thumbnail: nil
+                    )
+                )
+            } else {
+                selectedPlant = nil
+            }
         }
     }
+    
 
-    private func loadCachedPlants() -> [PerenualPlant]? {
-        guard let url = cacheFileURL(), FileManager.default.fileExists(atPath: url.path) else { return nil }
+    func fetchPlantDetail(id: Int) async {
+        isLoading = true
+        selectedPlantDetail = nil
+        defer { isLoading = false }
+        
+        let urlString = "https://perenual.com/api/species/details/\(id)?key=\(apiKey)"
+        guard let url = URL(string: urlString) else { return }
+        
         do {
-            let data = try Data(contentsOf: url)
-            let decoded = try JSONDecoder().decode([PerenualPlant].self, from: data)
-            return decoded
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let detail = try JSONDecoder().decode(PerenualPlantDetail.self, from: data)
+            selectedPlantDetail = detail
         } catch {
-            print("Failed to load plant cache:", error)
-            return nil
+            print("Detail API Error(id=\(id)): \(error)")
+            // Fallback: 425/426
+            if id == 425 || id == 426 {
+                selectedPlantDetail = PerenualPlantDetail(
+                    id: id,
+                    common_name: id == 425 ? "Swiss Cheese Plant" : "Snake Plant",
+                    scientific_name: id == 425 ? ["Monstera"] : ["Sansevieria"],
+                    other_name: nil,
+                    family: nil,
+                    origin: nil,
+                    type: nil,
+                    cycle: "Perennial",
+                    watering: id == 425 ? "Average" : "Minimum",
+                    sunlight: id == 425 ? ["Bright Indirect"] : ["Low Light"],
+                    indoor: true,
+                    poisonous_to_pets: id == 425 ? 1 : 0,
+                    default_image: PerenualPlant.DefaultImage(
+                        regular_url: id == 425
+                        ? "https://perenual.com/storage/species_image/425_monstera_deliciosa/og/monstera.jpg"
+                        : "https://perenual.com/storage/species_image/426_sansevieria_trifasciata/og/snakeplant.jpg",
+                        thumbnail: nil
+                    ),
+                    watering_general_benchmark: .init(value: "5-7", unit: "days"),
+                    dimensions: .init(type: nil, min_value: 1, max_value: 1.5, unit: "ft")
+                )
+            } else {
+                selectedPlantDetail = nil
+            }
         }
     }
 
