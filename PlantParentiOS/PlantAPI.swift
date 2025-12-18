@@ -126,14 +126,48 @@ struct PerenualPlantDetail: Codable, Identifiable {
 class PlantStore: ObservableObject {
     @Published var plants: [PerenualPlant] = []
     @Published var isLoading = true
-    
+
     @Published var selectedPlant: PerenualPlant?
     @Published var selectedPlantDetail: PerenualPlantDetail?
 
+    // Error message for UI
+    @Published var errorMessage: String? = nil
+
     private let apiKey = "sk-M6ci690caf9f1d9a813339"
-    
+    private let cacheFileName = "perenual_cached_plants.json"
+
     init() {
         Task { await fetchPlants() }
+    }
+
+    // Save plants to cache
+    private func saveCachedPlants(_ plants: [PerenualPlant]) {
+        do {
+            let data = try JSONEncoder().encode(plants)
+            let url = cacheFileURL()
+            try data.write(to: url, options: [.atomic])
+        } catch {
+            print("Failed to save cached plants: \(error)")
+        }
+    }
+
+    // Load plants from cache
+    private func loadCachedPlants() -> [PerenualPlant]? {
+        do {
+            let url = cacheFileURL()
+            let data = try Data(contentsOf: url)
+            let decoded = try JSONDecoder().decode([PerenualPlant].self, from: data)
+            return decoded
+        } catch {
+            print("Failed to load cached plants: \(error)")
+            return nil
+        }
+    }
+
+    // Helper to get cache file URL
+    private func cacheFileURL() -> URL {
+        let urls = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
+        return urls[0].appendingPathComponent(cacheFileName)
     }
     
     func fetchPlants() async {
