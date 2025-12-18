@@ -4,6 +4,7 @@ struct PlantLibraryView: View {
     @StateObject private var store = PlantStore()
     @State private var searchText: String = ""
     @State private var selectedFilter = ""
+    @State private var path: [Int] = []
     
     let columns = [
         GridItem(.flexible()),
@@ -13,22 +14,13 @@ struct PlantLibraryView: View {
     let filters = ["Low-Light", "Pet-Friendly", "Beginner", "Hardy"]
     
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             VStack(spacing: 0) {
-                VStack(spacing: 8) {
-                    //Header
-                       VStack(spacing:8){
-                           Text("Plant Library")
-                               .font(.title)
-                               .fontWeight(.bold)
-                               .padding()
-                       }
-                    Divider()
+                VStack(spacing: 10) {
                     // Search
                     HStack {
                         Image(systemName: "magnifyingglass")
                             .foregroundColor(.gray)
-                        
                         TextField("Search", text: $searchText)
                     }
                     .padding()
@@ -60,7 +52,6 @@ struct PlantLibraryView: View {
                         }
                         .padding(.horizontal)
                     }
-                    
                     Divider()
                 }
                 .background(Color.white)
@@ -75,33 +66,35 @@ struct PlantLibraryView: View {
                 } else {
                     LazyVGrid(columns: columns, spacing: 20) {
                         ForEach(store.plants) { plant in
-                            VStack {
-                                // Image
-                                AsyncImage(url: URL(string: plant.default_image?.regular_url ?? "")) { img in
-                                    img.resizable()
-                                        .scaledToFill()
-                                } placeholder: {
-                                    Color(.systemGray5)
+                            NavigationLink(value: plant.id) {
+                                VStack {
+                                    AsyncImage(url: URL(string: plant.default_image?.regular_url ?? "")) { img in
+                                        img.resizable()
+                                            .scaledToFill()
+                                    } placeholder: {
+                                        Color(.systemGray5)
+                                    }
+                                    .frame(width: 130, height: 130)
+                                    .clipShape(Circle())
+                                    .shadow(radius: 4)
+                                    
+                                    Text(plant.displayName)
+                                        .font(.headline)
+                                        .foregroundColor(.black)
+                                        .lineLimit(1)
                                 }
-                                .frame(width: 130, height: 130)
-                                .clipShape(Circle())
-                                .shadow(radius: 4)
-                                
-                                // Name
-                                Text(plant.displayName)
-                                    .font(.headline)
-                                    .foregroundColor(.black)
-                                    .lineLimit(1)
+                                .frame(maxWidth: .infinity)
                             }
-                            .frame(maxWidth: .infinity)
                         }
                     }
                     .padding()
                 }
             }
-            
+            .navigationTitle("Plant Library")
+            .navigationDestination(for: Int.self) { id in
+                PlantDetailPlaceholder(plantID: id)
+            }
         }
-        .navigationTitle("Plant Library")
     }
 }
 
