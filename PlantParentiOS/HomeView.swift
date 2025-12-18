@@ -217,12 +217,28 @@ struct HomeView: View {
         }
     }
 
+    private func deduplicationKey(for plant: PerenualPlant) -> String {
+        // Mirror PlantAPI.keyFor: trim and lowercase before checking emptiness,
+        // and fall back to scientific name when common name is empty.
+        let common = plant.common_name
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        if !common.isEmpty {
+            return common
+        }
+
+        let scientific = (plant.scientific_name.first ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        return scientific
+    }
+
     private func refreshUniquePlants() {
         // Build unique list by display name and pick 8 random plants from it
         let uniquePlants = store.plants.uniqued(by: { (p: PerenualPlant) -> String in
-            let name = p.common_name.trimmingCharacters(in: .whitespacesAndNewlines)
-            let fallback = p.scientific_name.first ?? ""
-            return (name.isEmpty ? fallback : name).lowercased()
+            return deduplicationKey(for: p)
         })
 
         // Shuffle and choose up to 8 unique plants
