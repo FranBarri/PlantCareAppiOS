@@ -1,5 +1,9 @@
 import SwiftUI
 
+// Import QuickTip
+// If needed, change to @testable import if using in tests
+// import QuickTip (not needed for same module)
+
 struct HomeView: View {
     @StateObject private var store = PlantStore()
     @EnvironmentObject private var greenhouse: GreenhouseStore
@@ -11,6 +15,9 @@ struct HomeView: View {
     @State private var toastIsError: Bool = false
     // Displayed plants for the carousel (8 random, deduplicated)
     @State private var displayedPlants: [PerenualPlant] = []
+
+    // Store random tips for this view
+    @State private var quickTips: [QuickTip] = QuickTipStore.randomTips(count: 2)
 
     // Helper to find the next watering plant info
     private var nextWateringPlantInfo: (plant: GreenhousePlant, nextWatering: Date)? {
@@ -113,9 +120,9 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Quick Tips")
                             .font(.title3).bold()
-
-                        TipRow(icon: "drop.fill", title: "Watering", text: "Water when the top inch of soil is dry.\nAvoid Overwatering.")
-                        TipRow(icon: "sun.max.fill", title: "Sunlight", text: "Rotate your plants weekly for even growth towards the light.")
+                        ForEach(quickTips) { tip in
+                            TipRow(icon: tip.icon, title: tip.title, text: tip.text)
+                        }
                     }
                     .padding(.horizontal)
                 }
