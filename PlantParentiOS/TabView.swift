@@ -23,8 +23,8 @@ struct MainTabView: View {
             PlantLibraryView()
                 .tabItem { Label("Library", systemImage: "book") }
 
-            PlantDetailPlaceholder()
-                .tabItem { Label("Detail", systemImage: "info.circle") }
+            //PlantDetailPlaceholder()
+            //    .tabItem { Label("Detail", systemImage: "info.circle") }
 
             NotificationsView()
                 .tabItem { Label("Notifications", systemImage: "bell") }
