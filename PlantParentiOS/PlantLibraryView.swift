@@ -11,7 +11,7 @@ struct PlantLibraryView: View {
         GridItem(.flexible())
     ]
     
-    let filters = ["Low-Light", "Pet-Friendly", "Beginner", "Hardy"]
+    let filters = ["Low-Light", "Pet-Friendly", "Beginner", "Indoor"]
     
     var body: some View {
         NavigationStack(path: $path) {
@@ -32,7 +32,13 @@ struct PlantLibraryView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(filters, id: \.self) { filter in
-                                Button(action: { selectedFilter = filter }) {
+                                Button {
+                                    if selectedFilter == filter {
+                                        selectedFilter = ""
+                                    } else {
+                                        selectedFilter = filter
+                                    }
+                                } label:  {
                                     Text(filter)
                                         .font(.subheadline)
                                         .fontWeight(.medium)
@@ -57,7 +63,7 @@ struct PlantLibraryView: View {
                 .background(Color.white)
             }
             Divider()
-
+            
             // Content
             ScrollView {
                 if store.isLoading {
@@ -65,7 +71,7 @@ struct PlantLibraryView: View {
                         .padding(.top, 40)
                 } else {
                     LazyVGrid(columns: columns, spacing: 20) {
-                        ForEach(store.plants) { plant in
+                        ForEach(filteredPlants) { plant in
                             NavigationLink(value: plant.id) {
                                 VStack {
                                     AsyncImage(url: URL(string: plant.default_image?.regular_url ?? "")) { img in
@@ -96,6 +102,43 @@ struct PlantLibraryView: View {
             }
         }
     }
+    var filteredPlants: [PerenualPlant] {
+        store.plants.filter { plant in
+            let matchesSearch =
+                searchText.isEmpty ||
+                plant.common_name.lowercased().contains(searchText.lowercased()) ||
+                plant.scientific_name.joined().lowercased().contains(searchText.lowercased())
+
+            let matchesFilter = matchesSelectedFilter(plant)
+
+            return matchesSearch && matchesFilter
+        }
+    }
+    
+    func matchesSelectedFilter(_ plant: PerenualPlant) -> Bool {
+        guard !selectedFilter.isEmpty else { return true }
+
+        switch selectedFilter {
+        case "Low-Light":
+            return plant.sunlight?.contains(where: {
+                $0.lowercased().contains("low")
+            }) ?? false
+
+        case "Pet-Friendly":
+            return plant.poisonous_to_pets == false
+
+        case "Beginner":
+            return plant.watering?.lowercased() == "average"
+                || plant.watering?.lowercased() == "minimum"
+
+        case "Indoor":
+            return plant.indoor == true
+
+        default:
+            return true
+        }
+    }
+
 }
 
 #Preview {
