@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct PlantDetailPlaceholder: View {
+struct PlantDetailView: View {
     let plantID: Int
     @StateObject private var store = PlantStore()
     @Environment(\.dismiss) private var dismiss

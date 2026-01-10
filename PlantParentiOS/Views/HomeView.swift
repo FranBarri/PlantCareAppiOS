@@ -263,61 +263,6 @@ extension Array {
     }
 }
 
-struct TipRow: View {
-    let icon: String
-    let title: String
-    let text: String
-    var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon)
-                .foregroundColor(.green)
-                .frame(width: 30, alignment: .leading)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.headline)
-                Text(text)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.leading)
-            }
-            Spacer()
-        }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
-    }
-}
-
-struct BannerView: View {
-    let message: String
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "leaf.fill")
-                .foregroundColor(.white)
-            Text(message)
-                .font(.subheadline).bold()
-                .foregroundColor(.white)
-            Spacer(minLength: 0)
-            Button {
-                withAnimation(.easeInOut) { }
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundColor(.white.opacity(0.9))
-            }
-            .buttonStyle(.plain)
-            .disabled(true) // non-interactive placeholder; can be wired to dismiss if desired
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 10)
-        .background(
-            Capsule()
-                .fill(Color.green)
-                .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
-        )
-        .padding(.horizontal)
-    }
-}
-
 #Preview("Sample Data") {
     let store = PlantStore()
     HomeView()
