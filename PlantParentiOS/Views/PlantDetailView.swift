@@ -230,6 +230,6 @@ private struct TagCapsule: View {
 }
 
 #Preview {
-    PlantDetailPlaceholder(plantID: 425)
+    PlantDetailView(plantID: 425)
         .environmentObject(GreenhouseStore())
 }
