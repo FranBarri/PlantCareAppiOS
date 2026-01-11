@@ -22,7 +22,7 @@ struct HomeView: View {
     // Helper to find the next watering plant info
     private var nextWateringPlantInfo: (plant: GreenhousePlant, nextWatering: Date)? {
         // Filter plants that have lastWatered or wateringIntervalDays
-        let now = Date()
+        _ = Date()
         
         // Calculate next watering date for each plant
         // If lastWatered or wateringIntervalDays missing, assume default interval 7 days with lastWatered = dateAdded or now
@@ -30,7 +30,7 @@ struct HomeView: View {
             let intervalDays = plant.wateringIntervalDays ?? 7
             
             // Prefer lastWatered, fallback to dateAdded, fallback to now
-            let lastWatered = plant.lastWatered ?? plant.dateAdded ?? now
+            let lastWatered = plant.lastWatered ?? plant.dateAdded
             
             let nextWatering = Calendar.current.date(byAdding: .day, value: intervalDays, to: lastWatered)!
             
