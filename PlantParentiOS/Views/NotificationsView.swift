@@ -1,8 +1,8 @@
 import SwiftUI
 
-enum NotificationType {
+enum NotificationType: Equatable {
     case watering
-    case tip
+    case tip(videoID: String)
 }
 
 struct AppNotification: Identifiable {
@@ -11,14 +11,22 @@ struct AppNotification: Identifiable {
     let subtitle: String
     let daysAgo: Int
     let imageName: String
-    let type: NotificationType
+    var type: NotificationType
     var isDone: Bool
+}
+
+extension AppNotification {
+    var youtubeVideoID: String {
+        if case let .tip(videoID) = type {
+            return videoID
+        }
+        return ""
+    }
 }
 
 struct NotificationsView: View {
 
     @State private var notifications = mockNotifications
-
     
     var body: some View {
         VStack(alignment: .leading) {
@@ -31,12 +39,14 @@ struct NotificationsView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     ForEach(notifications) { item in
-                        if item.type == .tip {
-                            NotificationTipRow(item: item)
-                        } else {
+                        switch item.type {
+                        case .watering:
                             NotificationRow(item: item) {
                                 markDone(item)
                             }
+
+                        case .tip(let videoID):
+                            NotificationTipRow(item: item, videoID: videoID)
                         }
                     }
                 }
@@ -77,7 +87,7 @@ let mockNotifications: [AppNotification] = [
           subtitle: "Mist plants or use a tray of water for humidity-loving plants.",
           daysAgo: 2,
           imageName: "person1",
-          type: .tip,
+          type: .tip(videoID: "OXSMqyIgD08"),
           isDone: false),
 
     .init(title: "Onion",
@@ -98,7 +108,7 @@ let mockNotifications: [AppNotification] = [
           subtitle: "Yellow leaves can be a sign of too much water.",
           daysAgo: 1,
           imageName: "",
-          type: .tip,
+          type: .tip(videoID: "dQw4w9WgXcQ"),
           isDone: false
         ),
     
@@ -164,36 +174,63 @@ struct NotificationRow: View {
 
 struct NotificationTipRow: View {
     let item: AppNotification
+    let videoID: String
+
+    @State private var showDetail = false
 
     var body: some View {
+        
         HStack(alignment: .top, spacing: 12) {
-
+            
             Image(systemName: "lightbulb.fill")
                 .font(.title2)
                 .foregroundColor(.green)
                 .padding(10)
                 .background(Color.green.opacity(0.15))
                 .clipShape(Circle())
-
+            
             VStack(alignment: .leading, spacing: 6) {
                 Text(item.title)
                     .font(.headline)
-
+                
                 Text(item.subtitle)
                     .font(.subheadline)
                     .foregroundColor(.gray)
             }
-
+            
             Spacer()
-
-            Text("\(item.daysAgo)d")
-                .font(.caption)
-                .foregroundColor(.gray)
+            
+            Button {
+                withAnimation {
+                    showDetail.toggle()
+                }
+            } label: {
+                Label("Video", systemImage: "chevron.right.circle")
+                    .labelStyle(.iconOnly)
+                    .imageScale(.large)
+                    .rotationEffect(.degrees(showDetail ? 90 : 0))
+                    .scaleEffect(showDetail ? 1.5 : 1)
+                    .padding()
+            }
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(.systemGray6))
         )
+        
+        if showDetail{
+            YouTubeEmbed(videoID: item.youtubeVideoID)
+                .frame(height: 200)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .shadow(radius: 8)
+                .padding(.horizontal)
+                .padding(.bottom, 12)
+                .transition(
+                    .move(edge: .leading)
+                    .combined(with: .opacity)
+                    .combined(with: .scale(scale: 0.9))
+                )
+        }
     }
 }
