@@ -98,7 +98,7 @@ struct PlantLibraryView: View {
             }
             .navigationTitle("Plant Library")
             .navigationDestination(for: Int.self) { id in
-                PlantDetailPlaceholder(plantID: id)
+                PlantDetailView(plantID: id)
             }
         }
     }
