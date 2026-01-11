@@ -286,7 +286,7 @@ class PlantStore: ObservableObject {
                     watering: id == 425 ? "Average" : "Minimum",
                     sunlight: id == 425 ? ["bright indirect"] : ["low light"],
                     indoor: true,
-                    poisonous_to_pets: id == 425 ? 1 : 0,
+                    poisonous_to_pets: ((id == 425 ? 1 : 0) != 0),
                     default_image: PerenualPlant.DefaultImage(
                         regular_url: id == 425
                         ? "https://perenual.com/storage/species_image/425_monstera_deliciosa/og/monstera.jpg"
