@@ -1,4 +1,7 @@
 import SwiftUI
+import AVFoundation
+
+var soundPlayer: AVAudioPlayer?
 
 enum NotificationType: Equatable {
     case watering
@@ -159,6 +162,8 @@ struct NotificationRow: View {
             if item.type == .watering && !item.isDone {
                 Button("Done") {
                     onDone()
+                    // Sound
+                    playClickSound()
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 6)
@@ -169,6 +174,20 @@ struct NotificationRow: View {
         }
         .padding(.vertical, 6)
         
+    }
+
+    private func playClickSound() {
+        guard let path = Bundle.main.path(forResource: "button-press.mp3", ofType: nil) else {
+            print("Sound file not found in bundle")
+            return
+        }
+        let url = URL(fileURLWithPath: path)
+        do {
+            soundPlayer = try AVAudioPlayer(contentsOf: url)
+            soundPlayer?.play()
+        } catch {
+            print("Failed to play sound:", error)
+        }
     }
 }
 
@@ -204,6 +223,9 @@ struct NotificationTipRow: View {
                 withAnimation {
                     showDetail.toggle()
                 }
+                
+                playClickSound()
+                
             } label: {
                 Label("Video", systemImage: "chevron.right.circle")
                     .labelStyle(.iconOnly)
@@ -231,6 +253,20 @@ struct NotificationTipRow: View {
                     .combined(with: .opacity)
                     .combined(with: .scale(scale: 0.9))
                 )
+        }
+    }
+
+    private func playClickSound() {
+        guard let path = Bundle.main.path(forResource: "button-press.mp3", ofType: nil) else {
+            print("Sound file not found in bundle")
+            return
+        }
+        let url = URL(fileURLWithPath: path)
+        do {
+            soundPlayer = try AVAudioPlayer(contentsOf: url)
+            soundPlayer?.play()
+        } catch {
+            print("Failed to play sound:", error)
         }
     }
 }
