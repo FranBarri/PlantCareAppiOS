@@ -12,7 +12,7 @@ final class GreenhousePersistenceIntegrationTests: XCTestCase {
         )
         // Add to store and persist
         var store = GreenhouseStore()
-        store.clear() // Clean state
+        store.clear()
         store.add(uniquePlant)
         XCTAssertTrue(store.plants.contains(where: { $0.plantID == uniquePlant.plantID }), "Plant should be added and present before reload")
         // Simulate app restart by creating a new store
